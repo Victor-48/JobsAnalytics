@@ -1,0 +1,25 @@
+.job-card {
+    background-color: #ffffff;
+    transition: all 0.3s ease;
+}
+
+.job-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.job-card h3 {
+    color: #111827;
+    margin-bottom: 0.75rem;
+}
+
+.job-card p {
+    color: #6b7280;
+    margin: 0.5rem 0;
+    font-size: 0.95rem;
+}
+
+.job-card p:last-child {
+    color: #3b82f6;
+    font-weight: 500;
+}

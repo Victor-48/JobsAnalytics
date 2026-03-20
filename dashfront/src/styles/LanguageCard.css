@@ -1,0 +1,17 @@
+.language-card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.language-card:hover {
+    transform: translateY(-2px);
+}
+
+.language-card h3 {
+    color: #1e40af;
+    margin-bottom: 0.5rem;
+}
+
+.language-card p {
+    color: #4b5563;
+    margin: 0.25rem 0;
+}
