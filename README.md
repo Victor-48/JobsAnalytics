@@ -1,6 +1,6 @@
 # Job Portal Analytics Dashboard
 
-A full-stack application designed to provide interactive analytics for job postings. The project features a React/Vite frontend with rich drag-and-drop charts, a Spring Boot backend, a Neo4j Graph Database, and an integrated LLM ("Ask your Data") feature powered by either Ollama or OpenAI.
+A full-stack application designed to provide interactive analytics for job postings. The project features a React/Vite frontend with drag-and-drop charts, a Spring Boot backend, a Neo4j Graph Database, and an integrated LLM ("Ask your Data") feature powered by either Ollama or OpenAI.
 
 ## Prerequisites
 
