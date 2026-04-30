@@ -14,15 +14,22 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class JobPosting {
-
-    @Id
-    @GeneratedValue
+    @Id @GeneratedValue
     private Long id;
 
     private String title;
     private String company;
     private String location;
     private String postedDate;
+
+    private Double salary;
+    private String currency;
+    private String experienceLevel;
+    private String industry; 
+    private String naceCode; 
+    private String remoteFlexibility;
+    private String employmentType;
+    private Integer satisfactionScore;
 
     @Relationship(type = "REQUIRES", direction = Relationship.Direction.OUTGOING)
     private List<ProgrammingLanguage> requiredLanguages;

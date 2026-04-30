@@ -1,12 +1,28 @@
 package org.example.dashboardj.service;
 
 import org.example.dashboardj.dto.JobPostingDTO;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.util.List;
+import java.util.Map;
 
 public interface JobPostingService {
-    List<JobPostingDTO> getAllJobs();
+    Page<JobPostingDTO> getAllJobs(Pageable pageable, String remoteFlexibility, String industry);
     JobPostingDTO getJobById(Long id);
     JobPostingDTO createJob(JobPostingDTO dto);
+    JobPostingDTO updateJob(Long id, JobPostingDTO dto);
+    List<JobPostingDTO> createJobs(List<JobPostingDTO> dtos); // Bulk insert method
     void deleteJob(Long id);
-    List<JobPostingDTO> searchByTitle(String title);
+    Page<JobPostingDTO> searchByTitle(String title, Pageable pageable);
+    
+    // Analytics methods
+    Map<String, Double> getAverageSalaryByIndustry();
+    Map<String, Long> getSalaryDistributionByExperience();
+    Map<String, Double> getRemoteVsOnsiteStats();
+    Map<String, Long> getEmploymentTypeDistribution();
+    Map<String, Long> getSubSectorsByNaceCode(String naceCode);
+    
+    // Time Series
+    Map<String, Long> getJobPostingsOverTime();
 }
