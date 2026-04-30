@@ -18,44 +18,39 @@ interface Props {
 
 export default function LanguageChart({ languages }: Props) {
     return (
-        // Add a class to the container for styling
-        <div className="chart-container">
-            <ResponsiveContainer width="100%" height={300}>
+        <div className="chart-container w-full h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={languages} margin={{ top: 5, right: 0, left: 0, bottom: 5 }}>
-                    {/* Define the gradient */}
                     <defs>
                         <linearGradient id="colorJobs" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.4}/>
+                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.4}/>
                         </linearGradient>
                     </defs>
 
-                    {/* Make grid lines lighter and remove vertical lines */}
-                    <CartesianGrid vertical={false} stroke="#e5e7eb" />
+                    <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="3 3" />
 
-                    {/* Declutter X-axis: remove axis line and tick lines */}
                     <XAxis
                         dataKey="name"
                         axisLine={false}
                         tickLine={false}
-                        dy={10} // Push labels down a bit
+                        dy={10} 
+                        tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}}
                     />
 
-                    {/* Hide the Y-axis for a cleaner look */}
                     <YAxis hide={true} />
 
-                    {/* Use the new CustomTooltip */}
                     <Tooltip
                         content={<CustomTooltip />}
-                        cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }} // Light blue hover
+                        cursor={{ fill: 'hsl(var(--primary) / 0.1)' }} 
                     />
 
-                    {/* Apply gradient, add rounded corners, and a subtle animation */}
                     <Bar
                         dataKey="jobCount"
                         fill="url(#colorJobs)"
-                        radius={[4, 4, 0, 0]} // [topLeft, topRight, bottomRight, bottomLeft]
+                        radius={[4, 4, 0, 0]}
                         animationDuration={300}
+                        barSize={30}
                     />
                 </BarChart>
             </ResponsiveContainer>
