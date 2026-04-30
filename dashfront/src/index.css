@@ -1,3 +1,10 @@
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -24,45 +31,127 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
 @media (prefers-color-scheme: light) {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    color: #121212;
+    background-color: #fff0e6;
   }
   a:hover {
-    color: #747bff;
+    color: #008080;
   }
   button {
     background-color: #f9f9f9;
+  }
+}
+
+@layer base {
+  .theme {
+    --font-heading: var(--font-sans);
+    --font-sans: 'Geist Variable', sans-serif;
+  }
+
+  :root {
+    /* Day View Theme (Light Mode) - High Contrast & Harmonious */
+
+    /* Background: Light Peach (#FFF0E6) for a serene feel */
+    --background: 24 100% 95%;
+
+    /* Foreground: Near-black (#121212) for Level AA text contrast against peach */
+    --foreground: 0 0% 7%;
+
+    --card: 0 0% 100%; /* Pure white cards for separation */
+    --card-foreground: 0 0% 7%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 7%;
+
+    /* Primary: Deep Teal (Cool Contrast to balance the warmth) */
+    --primary: 180 100% 25%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary: Mint Green (Soft Harmony for a serene, airy feel) */
+    --secondary: 150 60% 85%;
+    --secondary-foreground: 180 100% 20%; /* Dark text for contrast */
+
+    /* Muted: Light Gray (Soft Harmony) */
+    --muted: 210 20% 92%;
+    --muted-foreground: 0 0% 35%; /* Charcoal gray for secondary text */
+
+    /* Accent: Aqua (Cool Contrast) */
+    --accent: 190 80% 40%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 20% 85%;
+    --input: 210 20% 85%;
+    --ring: 180 100% 25%; /* Teal focus ring */
+
+    --radius: 0.75rem;
+
+    /* Chart colors for Day View (Cool Contrast & Soft Harmony mix) */
+    --chart-1: 180 100% 25%;  /* Deep Teal (Cool Contrast) */
+    --chart-2: 190 80% 40%;   /* Aqua (Cool Contrast) */
+    --chart-3: 220 80% 35%;   /* Navy Blue (Cool Contrast) */
+    --chart-4: 150 70% 40%;   /* Mint Green (Soft Harmony) */
+    --chart-5: 210 20% 40%;   /* Charcoal (Anchor Color) */
+  }
+
+  .dark {
+    /* Night View Theme (Dark Mode) - Midnight Blue, Glowing Accents */
+    --background: 230 40% 8%; /* Deep midnight blue */
+    --foreground: 210 40% 98%; /* Crisp starlight white */
+
+    --card: 230 40% 13%; /* Slightly lighter twilight blue for cards */
+    --card-foreground: 210 40% 98%;
+
+    --popover: 230 40% 13%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 260 80% 65%; /* Glowing twilight purple */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 230 40% 20%; /* Muted midnight blue */
+    --secondary-foreground: 200 90% 75%; /* Pale moonlight cyan */
+
+    --muted: 230 30% 20%; /* Dark muted blue */
+    --muted-foreground: 220 20% 65%; /* Soft silver/gray */
+
+    --accent: 200 90% 60%; /* Bright cyan */
+    --accent-foreground: 230 40% 8%;
+
+    --destructive: 350 80% 60%; /* Neon pink/red */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 230 40% 22%; /* Visible but subtle border */
+    --input: 230 40% 22%;
+    --ring: 260 80% 65%; /* Purple ring */
+
+    /* Chart colors for Night View (Neon & Galaxy inspired) */
+    --chart-1: 260 80% 65%;  /* Twilight Purple */
+    --chart-2: 200 90% 60%;  /* Glowing Cyan */
+    --chart-3: 50 90% 60%;   /* Moonlight Yellow */
+    --chart-4: 330 80% 65%;  /* Electric Pink */
+    --chart-5: 180 80% 50%;  /* Mint/Teal */
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+    outline-color: hsl(var(--ring) / 0.5);
+  }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  html {
+    font-family: 'Geist Variable', sans-serif;
   }
 }
