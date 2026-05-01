@@ -14,6 +14,8 @@ import java.util.List;
 public interface JobPostingRepository extends Neo4jRepository<JobPosting, Long> {
 
     Page<JobPosting> findByTitleContainingIgnoreCase(String title, Pageable pageable);
+    
+    List<JobPosting> findByTitleContainingIgnoreCase(String title);
 
     List<JobPosting> findByCompanyContainingIgnoreCase(String company);
     

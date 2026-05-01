@@ -1,0 +1,114 @@
+import React, { useEffect, useState } from 'react';
+
+export interface SavedChart {
+    id: string;
+    title: string;
+    chartType: string; // 'bar', 'pie', 'line'
+    data: any;
+    timestamp: number;
+    category: string; // 'skills', 'salary', 'jobs', 'custom'
+    query?: string; // Optional original query if from LLM
+    displayType?: string; // current display variant, e.g. pie/bar
+    displayUnit?: string; // absolute/percentage
+}
+
+interface Props {
+    onLoadInsight: (chart: SavedChart) => void;
+}
+
+export function SavedInsights({ onLoadInsight }: Props) {
+    const [savedCharts, setSavedCharts] = useState<SavedChart[]>([]);
+    
+    // Auto-update when localStorage changes
+    useEffect(() => {
+        const loadSaved = () => {
+            const saved = localStorage.getItem('savedInsights');
+            if (saved) {
+                try {
+                    setSavedCharts(JSON.parse(saved));
+                } catch (e) {
+                    console.error('Error parsing saved insights', e);
+                }
+            }
+        };
+
+        loadSaved();
+        
+        // Listen for custom event triggered when a new chart is saved
+        window.addEventListener('insightsUpdated', loadSaved);
+        return () => window.removeEventListener('insightsUpdated', loadSaved);
+    }, []);
+
+    const deleteInsight = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        const updated = savedCharts.filter(c => c.id !== id);
+        setSavedCharts(updated);
+        localStorage.setItem('savedInsights', JSON.stringify(updated));
+        window.dispatchEvent(new Event('insightsUpdated'));
+    };
+
+    // Group by category
+    const groupedCharts = savedCharts.reduce((acc, chart) => {
+        if (!acc[chart.category]) acc[chart.category] = [];
+        acc[chart.category].push(chart);
+        return acc;
+    }, {} as Record<string, SavedChart[]>);
+
+    return (
+        <div className="p-6">
+            <div className="flex items-center gap-3 mb-8 pb-4 border-b border-border/50">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
+                    </svg>
+                </div>
+                <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">Saved Insights</h2>
+            </div>
+            
+            {savedCharts.length === 0 ? (
+                <div className="text-sm text-muted-foreground text-center py-10 px-2">
+                    <svg className="w-12 h-12 mx-auto mb-3 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+                    No insights saved yet. Click the bookmark icon on any chart to save it here.
+                </div>
+            ) : (
+                <div className="space-y-6">
+                    {Object.entries(groupedCharts).map(([category, charts]) => (
+                        <div key={category}>
+                            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3 flex items-center gap-2">
+                                {category}
+                                <span className="bg-secondary text-secondary-foreground text-[10px] px-1.5 py-0.5 rounded-full">{charts.length}</span>
+                            </h3>
+                            <div className="space-y-2">
+                                {charts.sort((a, b) => b.timestamp - a.timestamp).map(chart => (
+                                    <div 
+                                        key={chart.id} 
+                                        onClick={() => onLoadInsight(chart)}
+                                        className="bg-background border border-border p-3 rounded-xl cursor-pointer hover:border-primary/50 hover:shadow-sm transition-all group"
+                                    >
+                                        <div className="flex justify-between items-start">
+                                            <h4 className="text-sm font-medium text-foreground leading-tight line-clamp-2 pr-4">{chart.title}</h4>
+                                            <button 
+                                                onClick={(e) => deleteInsight(chart.id, e)}
+                                                className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                            </button>
+                                        </div>
+                                        <div className="flex justify-between items-center mt-3">
+                                            <span className="text-[10px] font-medium text-muted-foreground bg-secondary px-2 py-0.5 rounded capitalize">
+                                                {chart.chartType}
+                                            </span>
+                                            <span className="text-[10px] text-muted-foreground">
+                                                {new Date(chart.timestamp).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}

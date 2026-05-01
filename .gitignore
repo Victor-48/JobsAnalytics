@@ -1,10 +1,60 @@
 # IDE specific files
 .idea/
 *.iml
+.vscode/
+*.swp
 
 # OS generated files
 .DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 
 # Exclude generated PDF files
 *.pdf
+
+# ----------------------------------------------------------------------
+# Backend (Spring Boot / Maven / DashboardJ)
+# ----------------------------------------------------------------------
+DashboardJ/target/
+DashboardJ/pom.xml.tag
+DashboardJ/pom.xml.releaseBackup
+DashboardJ/pom.xml.versionsBackup
+DashboardJ/pom.xml.next
+DashboardJ/release.properties
+DashboardJ/dependency-reduced-pom.xml
+DashboardJ/buildNumber.properties
+DashboardJ/.mvn/timing.properties
+DashboardJ/.mvn/wrapper/maven-wrapper.jar
+
+# Spring Boot specific
+DashboardJ/.spring-beans
+DashboardJ/.sts4-cache
+
+# Log files
+*.log
+DashboardJ/logs/
+
+# ----------------------------------------------------------------------
+# Frontend (React / Vite / dashfront)
+# ----------------------------------------------------------------------
+dashfront/node_modules/
+dashfront/dist/
+dashfront/dist-ssr/
+dashfront/*.local
+dashfront/.eslintcache
+
+# Environment variables (keep secrets out of git)
+dashfront/.env
+dashfront/.env.*
+!dashfront/.env.example
+
+# Vite output
+dashfront/.vite/
+
+# ----------------------------------------------------------------------
+# General build outputs
+# ----------------------------------------------------------------------
+out/
+build/
+bin/

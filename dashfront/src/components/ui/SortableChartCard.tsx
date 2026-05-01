@@ -1,9 +1,9 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { SwitchIcon, DragHandleIcon, PercentageIcon, HashIcon, FloatIcon } from './Icons';
+import { SwitchIcon, DragHandleIcon, PercentageIcon, HashIcon, FloatIcon, SaveIcon } from './Icons';
 
-export function SortableChartCard({ chart, children, onToggleType, displayType, onToggleUnit, displayUnit, isOverlay, onToggleFloat, isFloating }: any) {
+export function SortableChartCard({ chart, children, onToggleType, displayType, onToggleUnit, displayUnit, isOverlay, onToggleFloat, isFloating, onSave }: any) {
     const {
         attributes,
         listeners,
@@ -32,6 +32,11 @@ export function SortableChartCard({ chart, children, onToggleType, displayType, 
             <div className="flex justify-between items-center mb-6">
                 <h3 className="font-bold m-0 text-lg tracking-tight">{chart.title}</h3>
                 <div className="flex items-center gap-3">
+                    {onSave && (
+                        <button onClick={onSave} className="p-1.5 text-muted-foreground hover:text-green-600 hover:bg-green-50 rounded-md transition-colors" title="Save this insight">
+                            <SaveIcon />
+                        </button>
+                    )}
                     {onToggleFloat && (
                          <button onClick={onToggleFloat} className={`p-1.5 rounded-md transition-colors ${isFloating ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-secondary'}`} title="Pop out chart">
                             <FloatIcon />

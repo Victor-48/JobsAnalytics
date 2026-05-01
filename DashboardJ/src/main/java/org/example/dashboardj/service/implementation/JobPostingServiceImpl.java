@@ -64,21 +64,8 @@ public class JobPostingServiceImpl implements JobPostingService {
     }
 
     @Override
-    public Page<JobPostingDTO> getAllJobs(Pageable pageable, String remoteFlexibility, String industry) {
-        List<JobPosting> allJobs = jobRepo.findAll();
-        
-        List<JobPostingDTO> filteredJobs = allJobs.stream()
-            .filter(j -> remoteFlexibility == null || remoteFlexibility.isEmpty() || remoteFlexibility.equalsIgnoreCase(j.getRemoteFlexibility()))
-            .filter(j -> industry == null || industry.isEmpty() || industry.equalsIgnoreCase(j.getNaceCode()) || industry.equalsIgnoreCase(j.getIndustry()))
-            .map(this::mapToDTO)
-            .collect(Collectors.toList());
-
-        int start = (int) pageable.getOffset();
-        int end = Math.min((start + pageable.getPageSize()), filteredJobs.size());
-        
-        List<JobPostingDTO> pageContent = start > filteredJobs.size() ? new ArrayList<>() : filteredJobs.subList(start, end);
-
-        return new org.springframework.data.domain.PageImpl<>(pageContent, pageable, filteredJobs.size());
+    public List<JobPostingDTO> getAllJobs() {
+        return jobRepo.findAll().stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
     @Override
@@ -186,14 +173,48 @@ public class JobPostingServiceImpl implements JobPostingService {
     }
 
     @Override
+    public List<JobPostingDTO> searchByTitle(String title) {
+        return jobRepo.findByTitleContainingIgnoreCase(title).stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public Page<JobPostingDTO> searchByTitle(String title, Pageable pageable) {
         Page<JobPosting> pagedResult = jobRepo.findByTitleContainingIgnoreCase(title, pageable);
-        return pagedResult.map(this::mapToDTO);
+        List<JobPostingDTO> dtos = pagedResult.getContent().stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+        return new org.springframework.data.domain.PageImpl<>(dtos, pageable, pagedResult.getTotalElements());
+    }
+
+    @Override
+    public Page<JobPostingDTO> getAllJobs(Pageable pageable, String remoteFlexibility, String industry) {
+        List<JobPosting> allJobs = jobRepo.findAll();
+        
+        List<JobPostingDTO> filteredJobs = allJobs.stream()
+            .filter(j -> remoteFlexibility == null || remoteFlexibility.isEmpty() || remoteFlexibility.equalsIgnoreCase(j.getRemoteFlexibility()))
+            .filter(j -> industry == null || industry.isEmpty() || industry.equalsIgnoreCase(j.getNaceCode()) || industry.equalsIgnoreCase(j.getIndustry()))
+            .map(this::mapToDTO)
+            .collect(Collectors.toList());
+
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), filteredJobs.size());
+        
+        List<JobPostingDTO> pageContent;
+        if (start > filteredJobs.size()) {
+            pageContent = new ArrayList<>();
+        } else {
+            pageContent = filteredJobs.subList(start, end);
+        }
+
+        return new org.springframework.data.domain.PageImpl<>(pageContent, pageable, filteredJobs.size());
     }
 
     @Override
     public Map<String, Double> getAverageSalaryByIndustry() {
         return jobRepo.findAll().stream()
+                // Use NACE Code for grouping if available, fallback to industry
                 .filter(job -> (job.getNaceCode() != null || job.getIndustry() != null) && job.getSalary() != null)
                 .collect(Collectors.groupingBy(
                         job -> job.getNaceCode() != null ? job.getNaceCode() : job.getIndustry(),
@@ -233,11 +254,12 @@ public class JobPostingServiceImpl implements JobPostingService {
 
     @Override
     public Map<String, Long> getJobPostingsOverTime() {
+        // Group by just the YYYY-MM-DD part of the postedDate
         return jobRepo.findAll().stream()
                 .filter(job -> job.getPostedDate() != null)
                 .collect(Collectors.groupingBy(
                         job -> job.getPostedDate().split("T")[0],
-                        TreeMap::new,
+                        TreeMap::new, // Keep sorted by date
                         Collectors.counting()
                 ));
     }
@@ -247,7 +269,7 @@ public class JobPostingServiceImpl implements JobPostingService {
         return jobRepo.findAll().stream()
                 .filter(job -> naceCode.equals(job.getNaceCode()))
                 .collect(Collectors.groupingBy(
-                        JobPosting::getTitle,
+                        JobPosting::getTitle, // We use the job title as the sub-sector proxy
                         Collectors.counting()
                 ));
     }

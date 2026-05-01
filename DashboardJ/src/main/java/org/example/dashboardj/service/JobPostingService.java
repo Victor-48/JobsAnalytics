@@ -9,12 +9,14 @@ import java.util.Map;
 
 public interface JobPostingService {
     Page<JobPostingDTO> getAllJobs(Pageable pageable, String remoteFlexibility, String industry);
+    List<JobPostingDTO> getAllJobs(); // Added back for backwards compatibility
     JobPostingDTO getJobById(Long id);
     JobPostingDTO createJob(JobPostingDTO dto);
     JobPostingDTO updateJob(Long id, JobPostingDTO dto);
     List<JobPostingDTO> createJobs(List<JobPostingDTO> dtos); // Bulk insert method
     void deleteJob(Long id);
     Page<JobPostingDTO> searchByTitle(String title, Pageable pageable);
+    List<JobPostingDTO> searchByTitle(String title); // Added back for backwards compatibility
     
     // Analytics methods
     Map<String, Double> getAverageSalaryByIndustry();

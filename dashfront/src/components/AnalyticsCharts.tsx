@@ -35,6 +35,7 @@ import { SortableChartCard } from "./ui/SortableChartCard";
 import { FloatingWindow } from "./ui/FloatingWindow";
 import { EmptyState } from "./ui/EmptyState";
 import { formatValue, calculateTotal } from "../utils/chartUtils";
+import { useDragScroll } from "../utils/useDragScroll";
 
 const getThemeColor = (index: number) => {
     return `hsl(var(--chart-${(index % 5) + 1}))`;
@@ -58,7 +59,7 @@ const dropAnimationConfig = {
   }),
 };
 
-export default function AnalyticsCharts() {
+export default function AnalyticsCharts({ initialLoadedChart }: { initialLoadedChart?: any }) {
     const [data, setData] = useState({
         salaryByIndustry: [],
         jobsByExperience: [],
@@ -73,10 +74,11 @@ export default function AnalyticsCharts() {
     const [llmQuery, setLlmQuery] = useState("");
     const [isLlmLoading, setIsLlmLoading] = useState(false);
     const [llmChartData, setLlmChartData] = useState<any | null>(null);
+    const [loadedSavedChart, setLoadedSavedChart] = useState<any | null>(null);
 
     const [chartOrder, setChartOrder] = useState(initialCharts);
-    const [chartDisplay, setChartDisplay] = useState({ employmentType: 'pie', jobsByExperience: 'bar' });
-    const [chartUnits, setChartUnits] = useState({ employmentType: 'percentage', jobsByExperience: 'absolute' });
+    const [chartDisplay, setChartDisplay] = useState({ employmentType: 'pie', jobsByExperience: 'bar' } as any);
+    const [chartUnits, setChartUnits] = useState({ employmentType: 'percentage', jobsByExperience: 'absolute' } as any);
     const [searchQuery, setSearchQuery] = useState("");
     const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -84,6 +86,7 @@ export default function AnalyticsCharts() {
     const [focusedChartId, setFocusedChartId] = useState<string>('timeSeries');
     
     const [floatingWindows, setFloatingWindows] = useState<any[]>([]);
+    const { ref: scrollRef, events: scrollEvents } = useDragScroll<HTMLDivElement>();
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -93,6 +96,20 @@ export default function AnalyticsCharts() {
         }),
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
     );
+
+    // Watch for incoming saved chart from props
+    useEffect(() => {
+        if (initialLoadedChart) {
+            setLoadedSavedChart(initialLoadedChart);
+            setViewMode('single');
+            setFocusedChartId(initialLoadedChart.id);
+            
+            // Apply its saved display mode if present
+            if (initialLoadedChart.displayType && chartDisplay[initialLoadedChart.id as keyof typeof chartDisplay] !== undefined) {
+                setChartDisplay((prev: any) => ({ ...prev, [initialLoadedChart.id]: initialLoadedChart.displayType }));
+            }
+        }
+    }, [initialLoadedChart]);
 
     useEffect(() => {
         fetchSalaryByIndustry().then(d => {
@@ -135,11 +152,11 @@ export default function AnalyticsCharts() {
     };
 
     const toggleChartType = (chartName: keyof typeof chartDisplay) => {
-        setChartDisplay(prev => ({ ...prev, [chartName]: prev[chartName] === 'pie' ? 'bar' : 'pie' }));
+        setChartDisplay((prev: any) => ({ ...prev, [chartName]: prev[chartName] === 'pie' ? 'bar' : 'pie' }));
     };
 
     const toggleChartUnit = (chartName: keyof typeof chartUnits) => {
-        setChartUnits(prev => ({ ...prev, [chartName]: prev[chartName] === 'absolute' ? 'percentage' : 'absolute' }));
+        setChartUnits((prev: any) => ({ ...prev, [chartName]: prev[chartName] === 'absolute' ? 'percentage' : 'absolute' }));
     };
 
     const handleIndustryClick = async (entry: any) => {
@@ -173,7 +190,7 @@ export default function AnalyticsCharts() {
         setIsLlmLoading(true);
         try {
             const result = await queryLlmChart(llmQuery);
-            setLlmChartData({ id: 'llmGenerated', fullWidth: true, ...result });
+            setLlmChartData({ id: 'llmGenerated', fullWidth: true, query: llmQuery, ...result });
             if (viewMode === 'single') {
                 setFocusedChartId('llmGenerated');
             }
@@ -192,6 +209,70 @@ export default function AnalyticsCharts() {
         }
     };
 
+    // --- Save Chart Logic ---
+    const handleSaveChart = (chartId: string) => {
+        let chartToSave: any;
+        let finalData: any;
+        let finalCategory = "custom";
+
+        if (chartId === 'llmGenerated' && llmChartData) {
+            chartToSave = llmChartData;
+            finalData = llmChartData.data;
+            finalCategory = "AI Generated";
+        } else if (chartId === loadedSavedChart?.id) {
+            chartToSave = loadedSavedChart;
+            finalData = loadedSavedChart.data;
+            finalCategory = loadedSavedChart.category;
+        } else {
+            chartToSave = activeCharts.find(c => c.id === chartId);
+            if (!chartToSave) return;
+            
+            // Determine the data payload and category based on standard chart ID
+            if (chartId === 'timeSeries') {
+                // Time series data is not easily extracted directly from state here without refactoring TimeSeriesChart to take props
+                // For MVP, we will show an alert that standard time series cannot be saved this way.
+                alert("Please use the AI assistant to generate and save custom time series data.");
+                return;
+            } else if (chartId === 'salaryByIndustry') {
+                finalData = drillDownIndustry ? drillDownData : data.salaryByIndustry;
+                finalCategory = "Salary";
+            } else if (chartId === 'remoteVsOnsite') {
+                finalData = data.remoteVsOnsite;
+                finalCategory = "Salary";
+            } else if (chartId === 'employmentType') {
+                finalData = data.employmentType;
+                finalCategory = "Jobs";
+            } else if (chartId === 'jobsByExperience') {
+                finalData = data.jobsByExperience;
+                finalCategory = "Jobs";
+            }
+        }
+
+        if (!chartToSave || !finalData) return;
+
+        const newSavedInsight = {
+            id: `saved_${Date.now()}_${chartToSave.id}`, // Unique ID
+            title: chartToSave.title || "Custom Insight",
+            chartType: chartToSave.chartType || (chartToSave.type && !chartToSave.type.includes('/') ? chartToSave.type : (chartDisplay[chartId as keyof typeof chartDisplay] || 'bar')),
+            data: finalData,
+            timestamp: Date.now(),
+            category: finalCategory,
+            query: chartToSave.query || undefined,
+            displayType: chartDisplay[chartId as keyof typeof chartDisplay] || undefined,
+            displayUnit: chartUnits[chartId as keyof typeof chartUnits] || undefined
+        };
+
+        const existingStr = localStorage.getItem('savedInsights');
+        const existing = existingStr ? JSON.parse(existingStr) : [];
+        const newSavedList = [newSavedInsight, ...existing];
+        
+        localStorage.setItem('savedInsights', JSON.stringify(newSavedList));
+        
+        // Dispatch custom event to notify SavedInsights component in sidebar
+        window.dispatchEvent(new Event('insightsUpdated'));
+        alert(`Insight "${newSavedInsight.title}" saved successfully!`);
+    };
+
     const activeCharts = chartOrder.filter(chart =>
         chart.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         chart.type.toLowerCase().includes(searchQuery.toLowerCase())
@@ -202,21 +283,31 @@ export default function AnalyticsCharts() {
     }
 
     const renderChart = (chart: any) => {
-        if (chart.id === 'llmGenerated') {
+        if (chart.id === 'llmGenerated' || (chart.id && chart.id.startsWith('saved_') && chart === loadedSavedChart)) {
+            const isAI = chart.id === 'llmGenerated';
             return (
                 <div className="w-full h-full flex flex-col relative">
                      <button 
                         onClick={() => {
-                            setLlmChartData(null);
-                            if (focusedChartId === 'llmGenerated') setFocusedChartId(activeCharts[0]?.id || '');
+                            if (isAI) {
+                                setLlmChartData(null);
+                            } else {
+                                setLoadedSavedChart(null);
+                            }
+                            setFocusedChartId(activeCharts[0]?.id || '');
                         }}
                         className="absolute top-0 right-0 z-20 text-xs font-medium bg-destructive text-destructive-foreground px-2 py-1 rounded hover:opacity-80 shadow-sm transition-all"
                     >
-                        Close AI Chart
+                        Close {isAI ? 'AI Chart' : 'Saved Chart'}
                     </button>
+                    {chart.query && (
+                         <div className="absolute top-0 left-0 z-20 text-xs font-medium text-muted-foreground bg-background/80 px-2 py-1 rounded backdrop-blur-sm max-w-[70%] truncate">
+                            Query: <span className="text-foreground italic">"{chart.query}"</span>
+                        </div>
+                    )}
                     <ResponsiveContainer width="100%" height="100%">
                         {chart.chartType === 'bar' ? (
-                            <BarChart data={chart.data} margin={{ top: 20, right: 10, left: 10, bottom: 20 }}>
+                            <BarChart data={chart.data} margin={{ top: 30, right: 10, left: 10, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                                 <XAxis dataKey="name" tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dy={10} />
                                 <YAxis tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dx={-10} />
@@ -224,7 +315,7 @@ export default function AnalyticsCharts() {
                                 <Bar dataKey="value" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} barSize={40} />
                             </BarChart>
                         ) : chart.chartType === 'line' || chart.chartType === 'polyline' ? (
-                             <LineChart data={chart.data} margin={{ top: 20, right: 10, left: 10, bottom: 20 }}>
+                             <LineChart data={chart.data} margin={{ top: 30, right: 10, left: 10, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                                 <XAxis dataKey="name" tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dy={10} />
                                 <YAxis tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dx={-10} />
@@ -232,7 +323,7 @@ export default function AnalyticsCharts() {
                                 <Line type="monotone" dataKey="value" stroke="hsl(var(--chart-1))" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} activeDot={{r: 6}} />
                             </LineChart>
                         ) : chart.chartType === 'pie' ? (
-                             <PieChart>
+                             <PieChart margin={{ top: 30, right: 10, left: 10, bottom: 20 }}>
                                 <Pie data={chart.data} cx="50%" cy="50%" labelLine label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`} outerRadius={100} fill="hsl(var(--chart-1))" dataKey="value">
                                     {chart.data.map((_: any, index: number) => <Cell key={`cell-${index}`} fill={getThemeColor(index)} />)}
                                 </Pie>
@@ -240,7 +331,7 @@ export default function AnalyticsCharts() {
                                 <Legend />
                             </PieChart>
                         ) : (
-                            <div className="flex items-center justify-center h-full text-muted-foreground">Unsupported chart type from AI</div>
+                            <div className="flex items-center justify-center h-full text-muted-foreground">Unsupported chart type from AI/Save</div>
                         )}
                     </ResponsiveContainer>
                 </div>
@@ -256,7 +347,7 @@ export default function AnalyticsCharts() {
                 const isDrillDown = drillDownIndustry !== null;
 
                 return (
-                    <div className="w-full h-full flex flex-col relative group">
+                    <div className="w-full h-full flex flex-col relative group pointer-events-auto">
                         {isDrillDown && (
                             <button 
                                 onClick={() => setDrillDownIndustry(null)}
@@ -472,25 +563,45 @@ export default function AnalyticsCharts() {
 
             {viewMode === 'single' ? (
                 <div className="flex flex-col gap-6">
-                    {/* Sidebar list of charts to select from */}
-                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
-                        {llmChartData && (
-                             <button
-                                onClick={() => setFocusedChartId('llmGenerated')}
-                                className={`flex-shrink-0 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${focusedChartId === 'llmGenerated' ? 'bg-primary border-primary text-primary-foreground shadow-md' : 'bg-card border-border text-muted-foreground hover:bg-secondary'}`}
-                            >
-                                AI: {llmChartData.title}
-                            </button>
-                        )}
-                        {activeCharts.map(chart => (
-                            <button
-                                key={chart.id}
-                                onClick={() => setFocusedChartId(chart.id)}
-                                className={`flex-shrink-0 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${focusedChartId === chart.id ? 'bg-primary border-primary text-primary-foreground shadow-md' : 'bg-card border-border text-muted-foreground hover:bg-secondary'}`}
-                            >
-                                {chart.title}
-                            </button>
-                        ))}
+                    {/* Interactive Draggable Scroll Bar */}
+                    <div className="relative group w-full mx-auto select-none">
+                        <div
+                            ref={scrollRef}
+                            {...scrollEvents}
+                            className="flex gap-3 overflow-x-auto no-scrollbar py-2 px-4 scroll-smooth snap-x snap-mandatory"
+                            style={{ 
+                                cursor: 'grab', 
+                                WebkitOverflowScrolling: 'touch',
+                                msOverflowStyle: 'none',
+                                scrollbarWidth: 'none'
+                            }}
+                        >
+                            {loadedSavedChart && (
+                                <button
+                                    onClick={() => setFocusedChartId(loadedSavedChart.id)}
+                                    className={`chart-btn min-w-[200px] flex-shrink-0 px-4 py-3 rounded-xl border text-sm font-medium transition-all snap-center ${focusedChartId === loadedSavedChart.id ? 'bg-primary border-primary text-primary-foreground shadow-md' : 'bg-card border-border text-muted-foreground hover:bg-secondary hover:text-foreground'}`}
+                                >
+                                    Saved: {loadedSavedChart.title}
+                                </button>
+                            )}
+                            {llmChartData && (
+                                <button
+                                    onClick={() => setFocusedChartId('llmGenerated')}
+                                    className={`chart-btn min-w-[200px] flex-shrink-0 px-4 py-3 rounded-xl border text-sm font-medium transition-all snap-center ${focusedChartId === 'llmGenerated' ? 'bg-primary border-primary text-primary-foreground shadow-md' : 'bg-card border-border text-muted-foreground hover:bg-secondary hover:text-foreground'}`}
+                                >
+                                    AI: {llmChartData.title}
+                                </button>
+                            )}
+                            {activeCharts.map(chart => (
+                                <button
+                                    key={chart.id}
+                                    onClick={() => setFocusedChartId(chart.id)}
+                                    className={`chart-btn min-w-[200px] flex-shrink-0 px-4 py-3 rounded-xl border text-sm font-medium transition-all snap-center ${focusedChartId === chart.id ? 'bg-primary border-primary text-primary-foreground shadow-md' : 'bg-card border-border text-muted-foreground hover:bg-secondary hover:text-foreground'}`}
+                                >
+                                    {chart.title}
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     {/* The Focused Chart */}
@@ -500,8 +611,17 @@ export default function AnalyticsCharts() {
                                 chart={{...llmChartData, fullWidth: true}}
                                 onToggleFloat={() => toggleFloatingWindow(llmChartData)}
                                 isFloating={floatingWindows.some(w => w.id === 'llmGenerated')}
+                                onSave={() => handleSaveChart('llmGenerated')}
                             >
                                 {renderChart(llmChartData)}
+                            </SortableChartCard>
+                        ) : focusedChartId === loadedSavedChart?.id ? (
+                            <SortableChartCard 
+                                chart={{...loadedSavedChart, fullWidth: true}}
+                                onToggleFloat={() => toggleFloatingWindow(loadedSavedChart)}
+                                isFloating={floatingWindows.some(w => w.id === loadedSavedChart.id)}
+                            >
+                                {renderChart(loadedSavedChart)}
                             </SortableChartCard>
                         ) : activeCharts.find(c => c.id === focusedChartId) ? (
                             <SortableChartCard
@@ -512,6 +632,7 @@ export default function AnalyticsCharts() {
                                 displayUnit={['employmentType', 'jobsByExperience'].includes(focusedChartId) ? chartUnits[focusedChartId as keyof typeof chartUnits] : undefined}
                                 onToggleFloat={() => toggleFloatingWindow(activeCharts.find(c => c.id === focusedChartId))}
                                 isFloating={floatingWindows.some(w => w.id === focusedChartId)}
+                                onSave={() => handleSaveChart(focusedChartId)}
                             >
                                 {renderChart(activeCharts.find(c => c.id === focusedChartId))}
                             </SortableChartCard>
@@ -528,8 +649,13 @@ export default function AnalyticsCharts() {
                 >
                     <SortableContext items={activeCharts.map(c => c.id)} strategy={rectSortingStrategy}>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full auto-rows-min relative">
+                            {loadedSavedChart && (
+                                <SortableChartCard chart={loadedSavedChart}>
+                                    {renderChart(loadedSavedChart)}
+                                </SortableChartCard>
+                            )}
                             {llmChartData && (
-                                <SortableChartCard chart={llmChartData}>
+                                <SortableChartCard chart={llmChartData} onSave={() => handleSaveChart('llmGenerated')}>
                                     {renderChart(llmChartData)}
                                 </SortableChartCard>
                             )}
@@ -543,6 +669,7 @@ export default function AnalyticsCharts() {
                                     displayUnit={['employmentType', 'jobsByExperience'].includes(chart.id) ? chartUnits[chart.id as keyof typeof chartUnits] : undefined}
                                     onToggleFloat={() => toggleFloatingWindow(chart)}
                                     isFloating={floatingWindows.some(w => w.id === chart.id)}
+                                    onSave={() => handleSaveChart(chart.id)}
                                 >
                                     {renderChart(chart)}
                                 </SortableChartCard>
