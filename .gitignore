@@ -47,7 +47,6 @@ dashfront/dist-ssr/
 dashfront/*.local
 dashfront/.eslintcache
 
-# Environment variables (keep secrets out of git)
 dashfront/.env
 dashfront/.env.*
 !dashfront/.env.example
