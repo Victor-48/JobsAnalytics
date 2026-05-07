@@ -98,4 +98,10 @@ public class JobPostingController {
     public ResponseEntity<Map<String, Long>> getJobPostingsOverTime() {
         return ResponseEntity.ok(service.getJobPostingsOverTime());
     }
+
+    // Geospatial Endpoint
+    @GetMapping("/stats/locations")
+    public ResponseEntity<Map<String, Long>> getJobLocations() {
+        return ResponseEntity.ok(service.getJobLocations());
+    }
 }

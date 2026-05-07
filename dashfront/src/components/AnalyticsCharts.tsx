@@ -211,8 +211,8 @@ export default function AnalyticsCharts({ initialLoadedChart }: { initialLoadedC
 
     // --- Save Chart Logic ---
     const handleSaveChart = (chartId: string) => {
-        let chartToSave: any;
-        let finalData: any;
+        let chartToSave: any = null;
+        let finalData: any = null;
         let finalCategory = "custom";
 
         if (chartId === 'llmGenerated' && llmChartData) {
@@ -324,7 +324,7 @@ export default function AnalyticsCharts({ initialLoadedChart }: { initialLoadedC
                             </LineChart>
                         ) : chart.chartType === 'pie' ? (
                              <PieChart margin={{ top: 30, right: 10, left: 10, bottom: 20 }}>
-                                <Pie data={chart.data} cx="50%" cy="50%" labelLine label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`} outerRadius={100} fill="hsl(var(--chart-1))" dataKey="value">
+                                <Pie data={chart.data} cx="50%" cy="50%" labelLine label={({ name, percent }) => `${name}: ${(percent || 0 * 100).toFixed(0)}%`} outerRadius={100} fill="hsl(var(--chart-1))" dataKey="value">
                                     {chart.data.map((_: any, index: number) => <Cell key={`cell-${index}`} fill={getThemeColor(index)} />)}
                                 </Pie>
                                 <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />

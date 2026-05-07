@@ -77,6 +77,11 @@ export async function fetchSubSectorsByNaceCode(naceCode: string): Promise<Recor
     return response.data;
 }
 
+export async function fetchJobLocations(): Promise<Record<string, number>> {
+    const response: AxiosResponse<Record<string, number>> = await api.get("/jobs/stats/locations");
+    return response.data;
+}
+
 // LLM endpoints
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function queryLlmChart(query: string): Promise<any> {

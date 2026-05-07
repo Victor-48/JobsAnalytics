@@ -273,4 +273,14 @@ public class JobPostingServiceImpl implements JobPostingService {
                         Collectors.counting()
                 ));
     }
+    
+    @Override
+    public Map<String, Long> getJobLocations() {
+        return jobRepo.findAll().stream()
+                .filter(job -> job.getLocation() != null && !job.getLocation().isEmpty())
+                .collect(Collectors.groupingBy(
+                        JobPosting::getLocation,
+                        Collectors.counting()
+                ));
+    }
 }

@@ -68,7 +68,7 @@ export function SavedInsights({ onLoadInsight }: Props) {
             {savedCharts.length === 0 ? (
                 <div className="text-sm text-muted-foreground text-center py-10 px-2">
                     <svg className="w-12 h-12 mx-auto mb-3 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
-                    No insights saved yet. Click the bookmark icon on any chart to save it here.
+                    No insights saved yet. Click the save icon on any chart to save it here.
                 </div>
             ) : (
                 <div className="space-y-6">
@@ -90,13 +90,19 @@ export function SavedInsights({ onLoadInsight }: Props) {
                                             <button 
                                                 onClick={(e) => deleteInsight(chart.id, e)}
                                                 className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                                title="Delete Insight"
                                             >
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                                             </button>
                                         </div>
+                                        {chart.query && (
+                                             <div className="mt-1.5 text-xs text-muted-foreground italic line-clamp-1">
+                                                 "{chart.query}"
+                                             </div>
+                                        )}
                                         <div className="flex justify-between items-center mt-3">
                                             <span className="text-[10px] font-medium text-muted-foreground bg-secondary px-2 py-0.5 rounded capitalize">
-                                                {chart.chartType}
+                                                {chart.chartType} {chart.displayUnit === 'percentage' ? '(%)' : ''}
                                             </span>
                                             <span className="text-[10px] text-muted-foreground">
                                                 {new Date(chart.timestamp).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}

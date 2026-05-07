@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { fetchTopLanguages } from "../api/jobApi";
+import { fetchTopLanguages, fetchJobLocations } from "../api/jobApi";
 import type { ProgrammingLanguage } from "../types/Language";
 import LanguageCard from "../components/LanguageCard";
 import LanguageChart from "../components/LanguageChart";
@@ -9,10 +9,12 @@ import { SavedInsights } from "../components/SavedInsights";
 import type { SavedChart } from "../components/SavedInsights";
 import { useAuth } from "../contexts/AuthContext";
 import { RoleSwitcher } from "../components/RoleSwitcher";
+import MapChart from "../components/MapChart";
 
 export default function Dashboard() {
     const { role } = useAuth();
     const [languages, setLanguages] = useState<ProgrammingLanguage[]>([]);
+    const [locations, setLocations] = useState<Record<string, number>>({});
     const [error, setError] = useState<string | null>(null);
     const [loadedSavedChart, setLoadedSavedChart] = useState<SavedChart | null>(null);
 
@@ -20,7 +22,6 @@ export default function Dashboard() {
         fetchTopLanguages()
             .then(data => {
                 if (Array.isArray(data)) {
-                    // Filter out duplicate languages by name and ensure they have a valid name
                     const uniqueLangs = Array.from(new Map(data.filter(l => l && l.name).map(l => [l.name, l])).values());
                     setLanguages(uniqueLangs);
                 } else {
@@ -28,16 +29,23 @@ export default function Dashboard() {
                 }
             })
             .catch(() => setError("Could not load language data."));
+
+        fetchJobLocations()
+            .then(data => {
+                if (data) {
+                    setLocations(data);
+                }
+            })
+            .catch(console.error);
     }, []);
 
     const handleLoadInsight = (chart: SavedChart) => {
-        // We set the loaded chart, which will be passed down to AnalyticsCharts
         setLoadedSavedChart(chart);
     };
 
     if (error) return <p className="text-destructive p-4">{error}</p>;
 
-    // 1. Admin View (Mock representation of DB Health)
+    // 1. Admin View
     if (role === 'ADMIN') {
         return (
             <div className="flex flex-col w-full min-h-[calc(100vh-73px)] bg-background text-foreground transition-colors p-6 md:p-8">
@@ -80,13 +88,13 @@ export default function Dashboard() {
         );
     }
 
-    // 2. Guest View (Public Showcase)
+    // 2. Guest View
     if (role === 'GUEST') {
         return (
             <div className="flex w-full h-[calc(100vh-73px)] overflow-hidden bg-background text-foreground transition-colors">
                 <RoleSwitcher />
                 <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50/50 dark:bg-slate-900/50 relative custom-scrollbar">
-                    <div className="max-w-4xl mx-auto pb-20">
+                    <div className="max-w-5xl mx-auto pb-20">
                         <div className="text-center mb-12 mt-10">
                             <h1 className="text-4xl font-extrabold tracking-tight text-foreground mb-4">Discover Job Market Trends</h1>
                             <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-8">Get a glimpse into the current state of the industry. Sign in to access full interactive analytics and AI tools.</p>
@@ -108,11 +116,11 @@ export default function Dashboard() {
                                     </div>
                                 )}
                             </div>
-                            <div className="bg-card p-6 rounded-2xl shadow-sm border border-border flex flex-col items-center justify-center text-center">
-                                <svg className="w-16 h-16 text-muted-foreground mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
-                                <h3 className="font-bold text-lg mb-2">Interactive Maps</h3>
-                                <p className="text-muted-foreground text-sm">Visualize job density and salary distributions across different regions.</p>
-                                <span className="mt-4 text-xs font-semibold bg-secondary text-secondary-foreground px-3 py-1 rounded-full">Sign in to view</span>
+                            <div className="bg-card p-6 rounded-2xl shadow-sm border border-border flex flex-col h-full">
+                                <h2 className="text-lg font-bold mb-4">Job Distribution Map</h2>
+                                <div className="flex-grow min-h-[300px] z-0">
+                                     <MapChart locationData={locations} />
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -121,11 +129,11 @@ export default function Dashboard() {
         );
     }
 
-    // 3. User View (Authenticated - Full access to Analytics)
+    // 3. User View
     return (
         <div className="flex w-full h-[calc(100vh-73px)] overflow-hidden bg-background text-foreground transition-colors">
             <RoleSwitcher />
-            {/* Left Sidebar - Saved Insights Library */}
+            {/* Left Sidebar */}
             <aside className="w-72 flex-shrink-0 bg-card border-r border-border overflow-y-auto hidden lg:block shadow-[1px_0_15px_-5px_rgba(0,0,0,0.05)] z-10 custom-scrollbar">
                 <SavedInsights onLoadInsight={handleLoadInsight} />
                 
@@ -155,10 +163,9 @@ export default function Dashboard() {
                 </div>
             </aside>
 
-            {/* Main Central Content - AI Search & Dashboard */}
-            <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50/50 dark:bg-slate-900/50 relative custom-scrollbar">
+            {/* Main Central Content */}
+            <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50/50 dark:bg-slate-900/50 relative custom-scrollbar z-0">
                 <div className="max-w-6xl mx-auto pb-20">
-                    {/* Header Area */}
                     <div className="flex justify-between items-end mb-8 bg-card p-6 rounded-2xl shadow-sm border border-border">
                         <div>
                             <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-2">Analytics Center</h1>
@@ -172,15 +179,22 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    {/* Analytics Charts Component (Contains the Ask AI box and grid) */}
-                    <div className="w-full">
+                    <div className="w-full mb-8 relative z-10">
                         <AnalyticsCharts initialLoadedChart={loadedSavedChart} />
+                    </div>
+
+                     {/* Add Map to User Dashboard as well */}
+                     <div className="w-full bg-card p-6 rounded-2xl shadow-sm border border-border relative z-0">
+                        <h2 className="text-xl font-bold text-foreground mb-4">Geospatial Distribution</h2>
+                        <div className="min-h-[400px]">
+                           <MapChart locationData={locations} />
+                        </div>
                     </div>
                 </div>
             </main>
 
-            {/* Right Sidebar - Tools Menu */}
-            <aside className="w-20 flex-shrink-0 bg-card border-l border-border flex flex-col items-center py-8 gap-6 hidden md:flex shadow-[-1px_0_15px_-5px_rgba(0,0,0,0.05)] z-10">
+            {/* Right Sidebar */}
+            <aside className="w-20 flex-shrink-0 bg-card border-l border-border flex-col items-center py-8 gap-6 hidden md:flex shadow-[-1px_0_15px_-5px_rgba(0,0,0,0.05)] z-20">
                 <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest rotate-180 mb-4" style={{ writingMode: 'vertical-rl' }}>
                     Quick Tools
                 </div>

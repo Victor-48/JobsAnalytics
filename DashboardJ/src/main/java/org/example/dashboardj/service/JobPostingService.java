@@ -24,6 +24,7 @@ public interface JobPostingService {
     Map<String, Double> getRemoteVsOnsiteStats();
     Map<String, Long> getEmploymentTypeDistribution();
     Map<String, Long> getSubSectorsByNaceCode(String naceCode);
+    Map<String, Long> getJobLocations();
     
     // Time Series
     Map<String, Long> getJobPostingsOverTime();

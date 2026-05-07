@@ -35,6 +35,9 @@ DashboardJ/.sts4-cache
 *.log
 DashboardJ/logs/
 
+# Exclude backend .env file
+DashboardJ/.env
+
 # ----------------------------------------------------------------------
 # Frontend (React / Vite / dashfront)
 # ----------------------------------------------------------------------
