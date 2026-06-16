@@ -136,7 +136,7 @@ export default function Dashboard() {
             {/* Left Sidebar */}
             <aside className="w-72 flex-shrink-0 bg-card border-r border-border overflow-y-auto hidden lg:block shadow-[1px_0_15px_-5px_rgba(0,0,0,0.05)] z-10 custom-scrollbar">
                 <SavedInsights onLoadInsight={handleLoadInsight} />
-                
+
                 <div className="p-6 border-t border-border/50 mt-4">
                      <div className="flex items-center gap-3 mb-6 pb-2">
                         <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">Top Global Skills</h2>
@@ -208,14 +208,6 @@ export default function Dashboard() {
                 <Link to="/jobs" className="w-12 h-12 rounded-xl bg-background border border-border text-foreground flex items-center justify-center hover:bg-secondary transition-all hover:scale-105 group relative" title="Manage Jobs">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground group-hover:text-foreground transition-colors"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg>
                 </Link>
-
-                <button className="w-12 h-12 rounded-xl bg-background border border-border text-foreground flex items-center justify-center hover:bg-secondary transition-all hover:scale-105 group relative" title="Export Report">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground group-hover:text-foreground transition-colors"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                </button>
-                
-                <button className="w-12 h-12 rounded-xl bg-background border border-border text-foreground flex items-center justify-center hover:bg-secondary transition-all hover:scale-105 group relative mt-auto" title="Settings">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground group-hover:text-foreground transition-colors"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-                </button>
             </aside>
 
         </div>

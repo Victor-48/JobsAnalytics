@@ -73,6 +73,7 @@ export default function AnalyticsCharts({ initialLoadedChart }: { initialLoadedC
 
     const [llmQuery, setLlmQuery] = useState("");
     const [isLlmLoading, setIsLlmLoading] = useState(false);
+    const [llmError, setLlmError] = useState<string | null>(null);
     const [llmChartData, setLlmChartData] = useState<any | null>(null);
     const [loadedSavedChart, setLoadedSavedChart] = useState<any | null>(null);
 
@@ -188,14 +189,16 @@ export default function AnalyticsCharts({ initialLoadedChart }: { initialLoadedC
         if (!llmQuery.trim()) return;
 
         setIsLlmLoading(true);
+        setLlmError(null);
         try {
             const result = await queryLlmChart(llmQuery);
             setLlmChartData({ id: 'llmGenerated', fullWidth: true, query: llmQuery, ...result });
             if (viewMode === 'single') {
                 setFocusedChartId('llmGenerated');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to fetch LLM chart", error);
+            setLlmError(error.response?.data?.error || error.message || "An error occurred while generating the chart.");
         } finally {
             setIsLlmLoading(false);
         }
@@ -211,9 +214,9 @@ export default function AnalyticsCharts({ initialLoadedChart }: { initialLoadedC
 
     // --- Save Chart Logic ---
     const handleSaveChart = (chartId: string) => {
-        let chartToSave: any = null;
-        let finalData: any = null;
-        let finalCategory = "custom";
+        let chartToSave: any;
+        let finalData: any;
+        let finalCategory = "Custom Queries";
 
         if (chartId === 'llmGenerated' && llmChartData) {
             chartToSave = llmChartData;
@@ -229,22 +232,21 @@ export default function AnalyticsCharts({ initialLoadedChart }: { initialLoadedC
             
             // Determine the data payload and category based on standard chart ID
             if (chartId === 'timeSeries') {
-                // Time series data is not easily extracted directly from state here without refactoring TimeSeriesChart to take props
                 // For MVP, we will show an alert that standard time series cannot be saved this way.
                 alert("Please use the AI assistant to generate and save custom time series data.");
                 return;
             } else if (chartId === 'salaryByIndustry') {
                 finalData = drillDownIndustry ? drillDownData : data.salaryByIndustry;
-                finalCategory = "Salary";
+                finalCategory = "Salary & Compensation";
             } else if (chartId === 'remoteVsOnsite') {
                 finalData = data.remoteVsOnsite;
-                finalCategory = "Salary";
+                finalCategory = "Salary & Compensation";
             } else if (chartId === 'employmentType') {
                 finalData = data.employmentType;
-                finalCategory = "Jobs";
+                finalCategory = "Number of Jobs";
             } else if (chartId === 'jobsByExperience') {
                 finalData = data.jobsByExperience;
-                finalCategory = "Jobs";
+                finalCategory = "Number of Jobs";
             }
         }
 
@@ -258,6 +260,7 @@ export default function AnalyticsCharts({ initialLoadedChart }: { initialLoadedC
             timestamp: Date.now(),
             category: finalCategory,
             query: chartToSave.query || undefined,
+            explanation: chartToSave.explanation || undefined, // Save the explanation if it exists
             displayType: chartDisplay[chartId as keyof typeof chartDisplay] || undefined,
             displayUnit: chartUnits[chartId as keyof typeof chartUnits] || undefined
         };
@@ -305,35 +308,45 @@ export default function AnalyticsCharts({ initialLoadedChart }: { initialLoadedC
                             Query: <span className="text-foreground italic">"{chart.query}"</span>
                         </div>
                     )}
-                    <ResponsiveContainer width="100%" height="100%">
-                        {chart.chartType === 'bar' ? (
-                            <BarChart data={chart.data} margin={{ top: 30, right: 10, left: 10, bottom: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                                <XAxis dataKey="name" tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dy={10} />
-                                <YAxis tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dx={-10} />
-                                <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                                <Bar dataKey="value" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} barSize={40} />
-                            </BarChart>
-                        ) : chart.chartType === 'line' || chart.chartType === 'polyline' ? (
-                             <LineChart data={chart.data} margin={{ top: 30, right: 10, left: 10, bottom: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                                <XAxis dataKey="name" tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dy={10} />
-                                <YAxis tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dx={-10} />
-                                <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                                <Line type="monotone" dataKey="value" stroke="hsl(var(--chart-1))" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} activeDot={{r: 6}} />
-                            </LineChart>
-                        ) : chart.chartType === 'pie' ? (
-                             <PieChart margin={{ top: 30, right: 10, left: 10, bottom: 20 }}>
-                                <Pie data={chart.data} cx="50%" cy="50%" labelLine label={({ name, percent }) => `${name}: ${(percent || 0 * 100).toFixed(0)}%`} outerRadius={100} fill="hsl(var(--chart-1))" dataKey="value">
-                                    {chart.data.map((_: any, index: number) => <Cell key={`cell-${index}`} fill={getThemeColor(index)} />)}
-                                </Pie>
-                                <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                                <Legend />
-                            </PieChart>
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-muted-foreground">Unsupported chart type from AI/Save</div>
-                        )}
-                    </ResponsiveContainer>
+                    
+                    {/* Display the explanation if provided by the LLM */}
+                    {chart.explanation && (
+                        <div className="mt-8 mb-4 p-4 bg-secondary/30 rounded-lg text-sm text-foreground/80 border border-border">
+                            {chart.explanation}
+                        </div>
+                    )}
+
+                    <div className="flex-grow min-h-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                            {chart.chartType === 'bar' ? (
+                                <BarChart data={chart.data} margin={{ top: 30, right: 10, left: 10, bottom: 20 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                                    <XAxis dataKey="name" tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dy={10} />
+                                    <YAxis tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dx={-10} />
+                                    <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value: any) => [value, chart.yAxisLabel || 'Value']} />
+                                    <Bar dataKey="value" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} barSize={40} />
+                                </BarChart>
+                            ) : chart.chartType === 'line' || chart.chartType === 'polyline' ? (
+                                 <LineChart data={chart.data} margin={{ top: 30, right: 10, left: 10, bottom: 20 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                                    <XAxis dataKey="name" tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dy={10} />
+                                    <YAxis tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dx={-10} />
+                                    <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value: any) => [value, chart.yAxisLabel || 'Value']} />
+                                    <Line type="monotone" dataKey="value" stroke="hsl(var(--chart-1))" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} activeDot={{r: 6}} />
+                                </LineChart>
+                            ) : chart.chartType === 'pie' ? (
+                                 <PieChart margin={{ top: 30, right: 10, left: 10, bottom: 20 }}>
+                                    <Pie data={chart.data} cx="50%" cy="50%" labelLine label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`} outerRadius={100} fill="hsl(var(--chart-1))" dataKey="value">
+                                        {chart.data.map((_: any, index: number) => <Cell key={`cell-${index}`} fill={getThemeColor(index)} />)}
+                                    </Pie>
+                                    <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value: any) => [value, chart.yAxisLabel || 'Value']} />
+                                    <Legend />
+                                </PieChart>
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-muted-foreground">Unsupported chart type from AI/Save</div>
+                            )}
+                        </ResponsiveContainer>
+                    </div>
                 </div>
             );
         }
@@ -503,6 +516,11 @@ export default function AnalyticsCharts({ initialLoadedChart }: { initialLoadedC
                     </svg>
                     <h3 className="font-semibold text-lg">Ask your Data (AI Assistant)</h3>
                 </div>
+                {llmError && (
+                    <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg">
+                        {llmError}
+                    </div>
+                )}
                 <form onSubmit={handleLlmSearch} className="relative flex gap-3">
                     <div className="relative w-full">
                         <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>

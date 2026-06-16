@@ -29,7 +29,11 @@ const CITY_COORDINATES: Record<string, [number, number]> = {
     'Oradea': [47.0465, 21.9189],
     'Galati': [45.4353, 28.0080],
     'Ploiesti': [44.9367, 26.0125],
-    'Remote': [45.9, 25.0],
+    'Remote': [45.9, 25.0], 
+    'Romania': [45.9432, 24.9668], // Fallback for the whole country
+    'Ilfov': [44.5, 26.1],
+    'Iași': [47.1585, 27.6014],
+    'Brașov': [45.6427, 25.5887],
     
     // US & Global Cities from mock data
     'New York': [40.7128, -74.0060],
@@ -64,7 +68,27 @@ const CITY_COORDINATES: Record<string, [number, number]> = {
     'Washington': [38.9072, -77.0369],
     'Mountain View': [37.3861, -122.0839],
     'New Brunswick': [40.4862, -74.4518],
-    'Peoria': [40.6936, -89.5890]
+    'Peoria': [40.6936, -89.5890],
+    'Bengaluru, India': [12.9716, 77.5946],
+    'Toronto, Canada': [43.6510, -79.3470],
+    'Herzliya, Israel': [32.1624, 34.8447]
+};
+
+// API mapping for Adzuna locations (to extract the city name from complex strings)
+const extractCityFromAdzunaLocation = (location: string): string => {
+    // Adzuna locations often come in formats like "London, UK", "South East London", "London"
+    // We want to extract just the first part before commas, and remove extra regions
+    let city = location.split(',')[0].trim();
+    
+    // Some common Adzuna prefixes/suffixes to remove
+    const prefixes = ['South East ', 'South West ', 'North East ', 'North West ', 'Central ', 'Greater ', 'Inner ', 'Outer '];
+    for (const prefix of prefixes) {
+        if (city.startsWith(prefix)) {
+            city = city.substring(prefix.length).trim();
+            break; // Assuming only one prefix
+        }
+    }
+    return city;
 };
 
 interface MapChartProps {
@@ -96,12 +120,16 @@ export default function MapChart({ locationData }: MapChartProps) {
         Object.entries(locationData).forEach(([location, count]) => {
             // Very basic matching for demo. 
             // Real app needs fuzzy matching or exact geocoding
-            let coords = CITY_COORDINATES[location];
+            
+            // Extract the city from potentially complex Adzuna location strings
+            const extractedCity = extractCityFromAdzunaLocation(location);
+
+            let coords = CITY_COORDINATES[extractedCity];
             
             if(!coords) {
                  // Try to find if the location string contains any of our known cities
                  for (const [city, latlng] of Object.entries(CITY_COORDINATES)) {
-                     if (location.toLowerCase().includes(city.toLowerCase())) {
+                     if (extractedCity.toLowerCase().includes(city.toLowerCase()) || location.toLowerCase().includes(city.toLowerCase())) {
                          coords = latlng;
                          break;
                      }
@@ -111,7 +139,7 @@ export default function MapChart({ locationData }: MapChartProps) {
             if (coords) {
                 newMarkers.push({ name: location, coords, count });
             } else {
-                 console.warn(`Could not find coordinates for location: ${location}`);
+                 console.warn(`Could not find coordinates for location: ${location} (Extracted: ${extractedCity})`);
             }
         });
 

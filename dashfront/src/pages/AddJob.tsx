@@ -78,7 +78,13 @@ export const NACE_SECTORS = [
   { code: "H", description: "Transportation and storage" },
   { code: "L", description: "Real estate activities" },
   { code: "M", description: "Professional, scientific and technical activities" },
-  { code: "N", description: "Administrative and support service activities" }
+  { code: "N", description: "Administrative and support service activities" },
+  { code: "it-jobs", description: "IT Jobs" },
+  { code: "engineering-jobs", description: "Engineering Jobs" },
+  { code: "accounting-finance-jobs", description: "Accounting & Finance Jobs" },
+  { code: "healthcare-nursing-jobs", description: "Healthcare & Nursing Jobs" },
+  { code: "sales-jobs", description: "Sales Jobs" },
+  { code: "teaching-jobs", description: "Teaching Jobs" }
 ];
 
 export const COMMON_CURRENCIES = [
@@ -319,14 +325,14 @@ export default function AddJob() {
                 name="naceCode"
                 render={({ field }: { field: ControllerRenderProps<JobFormValues, "naceCode"> }) => (
                   <FormItem>
-                    <FormLabel>Economic Sector (NACE)</FormLabel>
+                    <FormLabel>Economic Sector (NACE / Adzuna)</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="bg-card text-foreground border-input">
                           <SelectValue placeholder="Select sector" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent className="bg-card text-card-foreground border-border">
+                      <SelectContent className="bg-card text-card-foreground border-border max-h-60 overflow-y-auto">
                         {NACE_SECTORS.map(sector => (
                           <SelectItem key={sector.code} value={sector.code} title={sector.description}>
                             {sector.description.length > 25 ? sector.description.substring(0, 25) + "..." : sector.description}

@@ -22,5 +22,4 @@ public class JobPostingDTO {
     private String naceCode; 
     private String remoteFlexibility;
     private String employmentType;
-    private Integer satisfactionScore;
 }
