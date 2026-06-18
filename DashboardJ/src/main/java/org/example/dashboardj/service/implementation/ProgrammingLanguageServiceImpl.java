@@ -1,13 +1,23 @@
 package org.example.dashboardj.service.implementation;
 
 import lombok.RequiredArgsConstructor;
+import org.example.dashboardj.dto.GraphDataDTO;
+import org.example.dashboardj.dto.GraphLinkDTO;
+import org.example.dashboardj.dto.GraphNodeDTO;
 import org.example.dashboardj.dto.ProgrammingLanguageDTO;
 import org.example.dashboardj.entity.ProgrammingLanguage;
 import org.example.dashboardj.repository.ProgrammingLanguageRepository;
 import org.example.dashboardj.service.ProgrammingLanguageService;
+import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -15,6 +25,7 @@ import java.util.stream.Collectors;
 public class ProgrammingLanguageServiceImpl implements ProgrammingLanguageService {
 
     private final ProgrammingLanguageRepository repository;
+    private final Neo4jClient neo4jClient;
 
     private ProgrammingLanguageDTO mapToDTO(ProgrammingLanguage lang) {
         return ProgrammingLanguageDTO.builder()
@@ -40,7 +51,7 @@ public class ProgrammingLanguageServiceImpl implements ProgrammingLanguageServic
     }
 
     @Override
-    public ProgrammingLanguageDTO getLanguageById(Long id) {
+    public ProgrammingLanguageDTO getLanguageById(String id) {
         return repository.findById(id)
                 .map(this::mapToDTO)
                 .orElseThrow(() -> new RuntimeException("Language not found"));
@@ -53,11 +64,10 @@ public class ProgrammingLanguageServiceImpl implements ProgrammingLanguageServic
     }
 
     @Override
-    public ProgrammingLanguageDTO updateLanguage(Long id, ProgrammingLanguageDTO dto) {
+    public ProgrammingLanguageDTO updateLanguage(String id, ProgrammingLanguageDTO dto) {
         ProgrammingLanguage existing = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Language not found"));
 
-        existing.setName(dto.getName());
         existing.setJobCount(dto.getJobCount());
         existing.setPopularityScore(dto.getPopularityScore());
 
@@ -65,7 +75,7 @@ public class ProgrammingLanguageServiceImpl implements ProgrammingLanguageServic
     }
 
     @Override
-    public void deleteLanguage(Long id) {
+    public void deleteLanguage(String id) {
         repository.deleteById(id);
     }
 
@@ -82,5 +92,29 @@ public class ProgrammingLanguageServiceImpl implements ProgrammingLanguageServic
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
-}
 
+    @Override
+    public GraphDataDTO getCoOccurrenceGraph() {
+        List<GraphLinkDTO> links = repository.getLanguageCoOccurrences();
+
+        Set<String> nodeIds = new HashSet<>();
+        for (GraphLinkDTO link : links) {
+            nodeIds.add(link.getSource());
+            nodeIds.add(link.getTarget());
+        }
+
+        List<ProgrammingLanguage> langDetails = repository.findAllByNameIn(nodeIds);
+        Map<String, ProgrammingLanguage> langMap = langDetails.stream()
+                .collect(Collectors.toMap(ProgrammingLanguage::getName, Function.identity()));
+
+        List<GraphNodeDTO> nodes = nodeIds.stream()
+                .map(id -> {
+                    ProgrammingLanguage lang = langMap.get(id);
+                    Integer jobCount = (lang != null && lang.getJobCount() != null) ? lang.getJobCount() : 1;
+                    return new GraphNodeDTO(id, jobCount, "default");
+                })
+                .collect(Collectors.toList());
+
+        return new GraphDataDTO(nodes, links);
+    }
+}

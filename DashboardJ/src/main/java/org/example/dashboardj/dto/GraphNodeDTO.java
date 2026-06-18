@@ -7,9 +7,8 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class AuthResponse {
-    private String token;
-    private String email;
-    private String fullName;
-    private String role;
+public class GraphNodeDTO {
+    private String id;
+    private Integer value;
+    private String group;
 }

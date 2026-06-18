@@ -6,12 +6,12 @@ import org.springframework.test.context.TestPropertySource;
 
 @SpringBootTest
 @TestPropertySource(properties = {
-    "JWT_SECRET="
+        "JWT_SECRET=",
+        "llm.provider=ollama"
 })
 class DashboardJApplicationTests {
 
     @Test
     void contextLoads() {
     }
-
 }

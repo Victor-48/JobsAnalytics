@@ -1,215 +1,219 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { fetchTopLanguages, fetchJobLocations } from "../api/jobApi";
-import type { ProgrammingLanguage } from "../types/Language";
-import LanguageCard from "../components/LanguageCard";
-import LanguageChart from "../components/LanguageChart";
+import { useQuery } from "@tanstack/react-query";
+import { fetchJobLocations, fetchSkillCoOccurrence } from "../api/jobApi";
 import AnalyticsCharts from "../components/AnalyticsCharts";
-import { SavedInsights } from "../components/SavedInsights";
-import type { SavedChart } from "../components/SavedInsights";
+import { SavedInsights, type SavedChart } from "../components/SavedInsights";
 import { useAuth } from "../contexts/AuthContext";
 import { RoleSwitcher } from "../components/RoleSwitcher";
-import MapChart from "../components/MapChart";
+import MapChart, { type MapViewState } from "../components/MapChart";
+import KeyIndicators from "../components/KeyIndicators";
+import { NetworkGraphChart } from "../components/NetworkGraphChart";
+import type { NodeObject } from 'force-graph';
 
+// --- MapCard Props ---
+interface MapCardProps {
+    isMaximized?: boolean;
+    onMaximizeToggle: () => void;
+    locationData: Record<string, number>;
+    viewState: MapViewState;
+    onViewChange: (state: MapViewState) => void;
+    isActive: boolean;
+    onActiveChange: (active: boolean) => void;
+}
+
+// --- MapCard Component ---
+function MapCard({
+                     isMaximized = false,
+                     onMaximizeToggle,
+                     locationData,
+                     viewState,
+                     onViewChange,
+                     isActive,
+                     onActiveChange
+                 }: MapCardProps) {
+    return (
+        <div className="w-full h-full bg-card p-6 rounded-2xl shadow-sm border border-border flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-foreground">
+                    Geospatial Distribution
+                </h2>
+
+                <button
+                    onClick={onMaximizeToggle}
+                    className="p-1 hover:bg-muted rounded-full text-muted-foreground hover:text-foreground"
+                >
+                    {isMaximized ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                        </svg>
+                    ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+                        </svg>
+                    )}
+                </button>
+            </div>
+
+            <div className="flex-grow min-h-[400px]">
+                <MapChart
+                    locationData={locationData}
+                    viewState={viewState}
+                    onViewChange={onViewChange}
+                    isActive={isActive}
+                    onActiveChange={onActiveChange}
+                />
+            </div>
+        </div>
+    );
+}
+
+// --- Dashboard ---
 export default function Dashboard() {
     const { role } = useAuth();
-    const [languages, setLanguages] = useState<ProgrammingLanguage[]>([]);
+
     const [locations, setLocations] = useState<Record<string, number>>({});
     const [error, setError] = useState<string | null>(null);
     const [loadedSavedChart, setLoadedSavedChart] = useState<SavedChart | null>(null);
+    const [showSavedInsights, setShowSavedInsights] = useState(true);
+
+    const [isMapMaximized, setMapMaximized] = useState(false);
+    const [mapViewState, setMapViewState] = useState<MapViewState>({
+        center: [20, 0],
+        zoom: 2
+    });
+
+    const [isMapActive, setMapActive] = useState(false);
+    const [highlightedNode, setHighlightedNode] = useState<NodeObject | null>(null);
+
+    const { data: coOccurrenceData, isLoading: isGraphLoading } = useQuery({
+        queryKey: ["skillCoOccurrence"],
+        queryFn: fetchSkillCoOccurrence,
+    });
 
     useEffect(() => {
-        fetchTopLanguages()
-            .then(data => {
-                if (Array.isArray(data)) {
-                    const uniqueLangs = Array.from(new Map(data.filter(l => l && l.name).map(l => [l.name, l])).values());
-                    setLanguages(uniqueLangs);
-                } else {
-                    setLanguages([]);
-                }
-            })
-            .catch(() => setError("Could not load language data."));
-
         fetchJobLocations()
             .then(data => {
-                if (data) {
-                    setLocations(data);
-                }
+                if (data) setLocations(data);
             })
-            .catch(console.error);
+            .catch(err => {
+                console.error(err);
+                setError("Could not load location data.");
+            });
     }, []);
+
+    if (error) {
+        return <p className="text-destructive p-4">{error}</p>;
+    }
 
     const handleLoadInsight = (chart: SavedChart) => {
         setLoadedSavedChart(chart);
     };
 
-    if (error) return <p className="text-destructive p-4">{error}</p>;
+    const handleMaximizeToggle = () => {
+        setMapMaximized(prev => !prev);
+    };
 
-    // 1. Admin View
-    if (role === 'ADMIN') {
-        return (
-            <div className="flex flex-col w-full min-h-[calc(100vh-73px)] bg-background text-foreground transition-colors p-6 md:p-8">
-                <RoleSwitcher />
-                <div className="max-w-6xl mx-auto w-full">
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-2">Platform Admin</h1>
-                        <p className="text-muted-foreground text-sm">Database health and platform metrics.</p>
-                    </div>
+    const mapCardProps = {
+        isMaximized: isMapMaximized,
+        onMaximizeToggle: handleMaximizeToggle,
+        locationData: locations,
+        viewState: mapViewState,
+        onViewChange: setMapViewState,
+        isActive: isMapActive,
+        onActiveChange: setMapActive,
+    };
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        <div className="bg-card border border-border p-6 rounded-2xl shadow-sm">
-                            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-2">Total Jobs</h3>
-                            <p className="text-4xl font-bold text-foreground">1,248</p>
-                            <p className="text-xs text-emerald-500 mt-2 font-medium">+12% this week</p>
-                        </div>
-                        <div className="bg-card border border-border p-6 rounded-2xl shadow-sm">
-                            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-2">Total Users</h3>
-                            <p className="text-4xl font-bold text-foreground">8,592</p>
-                            <p className="text-xs text-emerald-500 mt-2 font-medium">+5% this week</p>
-                        </div>
-                        <div className="bg-card border border-border p-6 rounded-2xl shadow-sm">
-                            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-2">Known Skills</h3>
-                            <p className="text-4xl font-bold text-foreground">342</p>
-                            <p className="text-xs text-muted-foreground mt-2 font-medium">Mapped to taxonomy</p>
-                        </div>
-                        <div className="bg-destructive/10 border border-destructive/20 p-6 rounded-2xl shadow-sm">
-                            <h3 className="text-sm font-medium text-destructive uppercase tracking-wider mb-2">Orphan Nodes</h3>
-                            <p className="text-4xl font-bold text-destructive">14</p>
-                            <p className="text-xs text-destructive/80 mt-2 font-medium">Requires cleanup</p>
-                        </div>
-                    </div>
-                    
-                    <div className="bg-card border border-border rounded-2xl p-8 text-center text-muted-foreground">
-                        <p className="mb-4">Graph Visualization & System Flow Charts would go here.</p>
-                        <p className="text-sm">Includes features like `NetworkGraphChart` and complex database queries.</p>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // 2. Guest View
-    if (role === 'GUEST') {
-        return (
-            <div className="flex w-full h-[calc(100vh-73px)] overflow-hidden bg-background text-foreground transition-colors">
-                <RoleSwitcher />
-                <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50/50 dark:bg-slate-900/50 relative custom-scrollbar">
-                    <div className="max-w-5xl mx-auto pb-20">
-                        <div className="text-center mb-12 mt-10">
-                            <h1 className="text-4xl font-extrabold tracking-tight text-foreground mb-4">Discover Job Market Trends</h1>
-                            <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-8">Get a glimpse into the current state of the industry. Sign in to access full interactive analytics and AI tools.</p>
-                            <Link to="/register" className="bg-primary text-primary-foreground px-8 py-3 rounded-full font-medium shadow-md hover:opacity-90 transition-opacity">
-                                Create Free Account
-                            </Link>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-                            <div className="bg-card p-6 rounded-2xl shadow-sm border border-border">
-                                <h2 className="text-lg font-bold mb-4">Top Required Skills</h2>
-                                {languages.length > 0 ? (
-                                    <div className="flex justify-center w-full h-64">
-                                         <LanguageChart languages={languages.slice(0, 5)} />
-                                    </div>
-                                ) : (
-                                    <div className="flex justify-center items-center h-64">
-                                        <p className="text-sm text-muted-foreground">No language data found.</p>
-                                    </div>
-                                )}
-                            </div>
-                            <div className="bg-card p-6 rounded-2xl shadow-sm border border-border flex flex-col h-full">
-                                <h2 className="text-lg font-bold mb-4">Job Distribution Map</h2>
-                                <div className="flex-grow min-h-[300px] z-0">
-                                     <MapChart locationData={locations} />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </main>
-            </div>
-        );
-    }
-
-    // 3. User View
     return (
-        <div className="flex w-full h-[calc(100vh-73px)] overflow-hidden bg-background text-foreground transition-colors">
+        <div className="flex w-full h-[calc(100vh-73px)] overflow-hidden bg-background text-foreground relative">
             <RoleSwitcher />
-            {/* Left Sidebar */}
-            <aside className="w-72 flex-shrink-0 bg-card border-r border-border overflow-y-auto hidden lg:block shadow-[1px_0_15px_-5px_rgba(0,0,0,0.05)] z-10 custom-scrollbar">
-                <SavedInsights onLoadInsight={handleLoadInsight} />
 
-                <div className="p-6 border-t border-border/50 mt-4">
-                     <div className="flex items-center gap-3 mb-6 pb-2">
-                        <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">Top Global Skills</h2>
-                    </div>
-                    <div className="space-y-6">
-                        {languages.length > 0 ? (
-                            <div>
-                                <div className="mb-6 bg-background rounded-xl p-2 border border-border shadow-inner">
-                                    <LanguageChart languages={languages} />
-                                </div>
-                                <div className="space-y-3">
-                                    {languages.slice(0, 3).map((lang, index) => (
-                                        <LanguageCard key={lang.name || index} language={lang} />
-                                    ))}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-                                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-3"></div>
-                                <p className="text-sm">Loading skills...</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
+            <button
+                onClick={() => setShowSavedInsights(prev => !prev)}
+                className={`absolute top-1/2 -translate-y-1/2 z-30 w-6 h-16 bg-card border-y border-r border-border rounded-r-lg flex items-center justify-center transition-all duration-300 hover:bg-secondary group ${
+                    showSavedInsights ? "left-72" : "left-0"
+                }`}
+            >
+                <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className={`text-muted-foreground group-hover:text-foreground transition-transform ${
+                        showSavedInsights ? "" : "rotate-180"
+                    }`}
+                >
+                    <path d="m15 18-6-6 6-6" />
+                </svg>
+            </button>
+
+            {/* Sidebar */}
+            <aside
+                className={`absolute left-0 top-0 bottom-0 w-72 bg-card border-r border-border overflow-y-auto z-20 transition-transform duration-300 hidden lg:block ${
+                    showSavedInsights ? "translate-x-0" : "-translate-x-full"
+                }`}
+            >
+                <SavedInsights onLoadInsight={handleLoadInsight} />
             </aside>
 
-            {/* Main Central Content */}
-            <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50/50 dark:bg-slate-900/50 relative custom-scrollbar z-0">
+            {/* Main */}
+            <main
+                className={`flex-1 overflow-y-auto p-4 md:p-8 transition-all duration-300 ${
+                    showSavedInsights ? "lg:ml-72" : "ml-0"
+                }`}
+            >
                 <div className="max-w-6xl mx-auto pb-20">
-                    <div className="flex justify-between items-end mb-8 bg-card p-6 rounded-2xl shadow-sm border border-border">
-                        <div>
-                            <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-2">Analytics Center</h1>
-                            <p className="text-muted-foreground text-sm max-w-lg">Explore job market trends, query with AI, and save custom insights to your library.</p>
-                        </div>
-                        <div className="hidden sm:block">
-                            <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-medium">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-                                Live Data
-                            </div>
-                        </div>
-                    </div>
 
-                    <div className="w-full mb-8 relative z-10">
+                    <KeyIndicators />
+
+                    <div className="w-full mb-8">
                         <AnalyticsCharts initialLoadedChart={loadedSavedChart} />
                     </div>
 
-                     {/* Add Map to User Dashboard as well */}
-                     <div className="w-full bg-card p-6 rounded-2xl shadow-sm border border-border relative z-0">
-                        <h2 className="text-xl font-bold text-foreground mb-4">Geospatial Distribution</h2>
-                        <div className="min-h-[400px]">
-                           <MapChart locationData={locations} />
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+
+                        {/* Map */}
+                        <MapCard {...mapCardProps} />
+
+                        {/* Network */}
+                        <div className="w-full bg-card p-6 rounded-2xl border border-border">
+                            <h2 className="text-xl font-bold mb-4">
+                                Skill Co-occurrence Network
+                            </h2>
+
+                            <div className="min-h-[400px]">
+                                {isGraphLoading ? (
+                                    <p>Loading graph...</p>
+                                ) : (
+                                    coOccurrenceData && (
+                                        <NetworkGraphChart 
+                                            data={coOccurrenceData} 
+                                            highlightedNode={highlightedNode}
+                                            onNodeClick={setHighlightedNode}
+                                            onBackgroundClick={() => setHighlightedNode(null)}
+                                        />
+                                    )
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
             </main>
 
-            {/* Right Sidebar */}
-            <aside className="w-20 flex-shrink-0 bg-card border-l border-border flex-col items-center py-8 gap-6 hidden md:flex shadow-[-1px_0_15px_-5px_rgba(0,0,0,0.05)] z-20">
-                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest rotate-180 mb-4" style={{ writingMode: 'vertical-rl' }}>
-                    Quick Tools
-                </div>
-                
-                <Link to="/add-job" className="w-12 h-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 hover:scale-105 transition-all shadow-md group relative" title="Add New Job">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                </Link>
+            {/* Fullscreen Map */}
+            {isMapMaximized && (
+                <>
+                    <div
+                        className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
+                        onClick={() => setMapMaximized(false)}
+                    />
 
-                <div className="w-10 h-[1px] bg-border my-1"></div>
-
-                <Link to="/jobs" className="w-12 h-12 rounded-xl bg-background border border-border text-foreground flex items-center justify-center hover:bg-secondary transition-all hover:scale-105 group relative" title="Manage Jobs">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground group-hover:text-foreground transition-colors"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg>
-                </Link>
-            </aside>
-
+                    <div className="fixed inset-4 md:inset-8 z-50">
+                        <MapCard {...mapCardProps} isMaximized={true} />
+                    </div>
+                </>
+            )}
         </div>
     );
 }

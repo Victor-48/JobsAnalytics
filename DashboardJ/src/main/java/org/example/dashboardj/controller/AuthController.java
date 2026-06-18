@@ -19,7 +19,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class AuthController {
 
     private final AuthenticationManager authenticationManager;
@@ -40,12 +39,7 @@ public class AuthController {
         final User user = userRepository.findByEmail(authRequest.getEmail()).orElseThrow();
         final String jwt = jwtUtil.generateToken(user.getEmail(), user.getRole(), user.getFullName());
 
-        return ResponseEntity.ok(AuthResponse.builder()
-                .token(jwt)
-                .email(user.getEmail())
-                .fullName(user.getFullName())
-                .role(user.getRole())
-                .build());
+        return ResponseEntity.ok(new AuthResponse(jwt, user.getEmail(), user.getFullName(), user.getRole()));
     }
 
     @PostMapping("/register")
@@ -55,23 +49,13 @@ public class AuthController {
         }
 
         // Create new user's account
-        User user = User.builder()
-                .email(registerRequest.getEmail())
-                .password(passwordEncoder.encode(registerRequest.getPassword()))
-                .fullName(registerRequest.getFullName())
-                .role("USER") // Default role is USER
-                .build();
+        User user = new User(null, registerRequest.getEmail(), passwordEncoder.encode(registerRequest.getPassword()), registerRequest.getFullName(), "USER");
 
         userRepository.save(user);
 
         // Auto-login after registration
         final String jwt = jwtUtil.generateToken(user.getEmail(), user.getRole(), user.getFullName());
 
-        return ResponseEntity.ok(AuthResponse.builder()
-                .token(jwt)
-                .email(user.getEmail())
-                .fullName(user.getFullName())
-                .role(user.getRole())
-                .build());
+        return ResponseEntity.ok(new AuthResponse(jwt, user.getEmail(), user.getFullName(), user.getRole()));
     }
 }

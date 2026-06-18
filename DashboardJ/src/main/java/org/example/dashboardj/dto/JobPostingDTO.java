@@ -8,7 +8,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class JobPostingDTO {
-    private Long id;
+    private String id;
     private String title;
     private String company;
     private String location;

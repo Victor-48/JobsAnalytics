@@ -1,12 +1,14 @@
 package org.example.dashboardj.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.example.dashboardj.dto.GraphDataDTO;
 import org.example.dashboardj.dto.ProgrammingLanguageDTO;
 import org.example.dashboardj.service.ProgrammingLanguageService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/languages")
@@ -22,7 +24,7 @@ public class ProgrammingLanguageController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ProgrammingLanguageDTO> getLanguageById(@PathVariable Long id) {
+    public ResponseEntity<ProgrammingLanguageDTO> getLanguageById(@PathVariable String id) {
         return ResponseEntity.ok(service.getLanguageById(id));
     }
 
@@ -32,13 +34,13 @@ public class ProgrammingLanguageController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ProgrammingLanguageDTO> updateLanguage(@PathVariable Long id,
+    public ResponseEntity<ProgrammingLanguageDTO> updateLanguage(@PathVariable String id,
                                                                  @RequestBody ProgrammingLanguageDTO dto) {
         return ResponseEntity.ok(service.updateLanguage(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteLanguage(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteLanguage(@PathVariable String id) {
         service.deleteLanguage(id);
         return ResponseEntity.noContent().build();
     }
@@ -51,5 +53,10 @@ public class ProgrammingLanguageController {
     @GetMapping("/search")
     public ResponseEntity<List<ProgrammingLanguageDTO>> searchLanguages(@RequestParam String name) {
         return ResponseEntity.ok(service.searchLanguages(name));
+    }
+
+    @GetMapping("/co-occurrence")
+    public ResponseEntity<GraphDataDTO> getLanguageCoOccurrenceGraph() {
+        return ResponseEntity.ok(service.getCoOccurrenceGraph());
     }
 }

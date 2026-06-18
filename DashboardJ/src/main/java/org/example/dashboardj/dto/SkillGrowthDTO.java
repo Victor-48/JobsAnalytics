@@ -7,9 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class AuthResponse {
-    private String token;
-    private String email;
-    private String fullName;
-    private String role;
+public class SkillGrowthDTO {
+    private String skillName;
+    private Double growthPercentage;
 }

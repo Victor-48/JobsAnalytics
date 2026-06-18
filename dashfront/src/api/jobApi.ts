@@ -16,6 +16,29 @@ export interface PageResponse<T> {
     empty: boolean;
 }
 
+export interface KeyIndicator {
+    title: string;
+    value: string;
+    trend: string;
+}
+
+export interface GraphNode {
+    id: string;
+    value: number;
+    group: string;
+}
+
+export interface GraphLink {
+    source: string;
+    target: string;
+    value: number;
+}
+
+export interface GraphData {
+    nodes: GraphNode[];
+    links: GraphLink[];
+}
+
 export async function fetchTopLanguages(): Promise<ProgrammingLanguage[]> {
     const response: AxiosResponse<ProgrammingLanguage[]> = await api.get("/languages/top");
     return response.data;
@@ -40,12 +63,22 @@ export async function addJob(job: JobPosting): Promise<JobPosting> {
     return response.data;
 }
 
-export async function updateJob(id: number, job: JobPosting): Promise<JobPosting> {
+export async function updateJob(id: string, job: JobPosting): Promise<JobPosting> { // Changed id: number to id: string
     const response: AxiosResponse<JobPosting> = await api.put(`/jobs/${id}`, job);
     return response.data;
 }
 
 // Analytics endpoints
+
+export async function fetchKeyIndicators(): Promise<KeyIndicator[]> {
+    const response: AxiosResponse<KeyIndicator[]> = await api.get("/jobs/stats/key-indicators");
+    return response.data;
+}
+
+export async function fetchSkillCoOccurrence(): Promise<GraphData> {
+    const response: AxiosResponse<GraphData> = await api.get("/languages/co-occurrence");
+    return response.data;
+}
 
 export async function fetchSalaryByIndustry(): Promise<Record<string, number>> {
     const response: AxiosResponse<Record<string, number>> = await api.get("/jobs/stats/salary-by-industry");

@@ -1,7 +1,7 @@
 package org.example.dashboardj.service.implementation;
 
 import lombok.RequiredArgsConstructor;
-import org.example.dashboardj.dto.JobPostingDTO;
+import org.example.dashboardj.dto.*;
 import org.example.dashboardj.entity.JobPosting;
 import org.example.dashboardj.entity.ProgrammingLanguage;
 import org.example.dashboardj.repository.JobPostingRepository;
@@ -12,6 +12,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -28,7 +30,7 @@ public class JobPostingServiceImpl implements JobPostingService {
                 .title(job.getTitle())
                 .company(job.getCompany())
                 .location(job.getLocation())
-                .postedDate(job.getPostedDate())
+                .postedDate(job.getPostedDate() != null ? job.getPostedDate().toString() : null)
                 .salary(job.getSalary())
                 .currency(job.getCurrency())
                 .experienceLevel(job.getExperienceLevel())
@@ -46,12 +48,21 @@ public class JobPostingServiceImpl implements JobPostingService {
     }
 
     private JobPosting mapToEntity(JobPostingDTO dto, List<ProgrammingLanguage> languages) {
+        LocalDate date = null;
+        if (dto.getPostedDate() != null && !dto.getPostedDate().isEmpty()) {
+            try {
+                date = LocalDate.parse(dto.getPostedDate().split("T")[0]);
+            } catch (Exception e) {
+                // Handle parsing error if needed
+            }
+        }
+        
         return JobPosting.builder()
                 .id(dto.getId())
                 .title(dto.getTitle())
                 .company(dto.getCompany())
                 .location(dto.getLocation())
-                .postedDate(dto.getPostedDate())
+                .postedDate(date)
                 .salary(dto.getSalary())
                 .currency(dto.getCurrency())
                 .experienceLevel(dto.getExperienceLevel())
@@ -69,7 +80,7 @@ public class JobPostingServiceImpl implements JobPostingService {
     }
 
     @Override
-    public JobPostingDTO getJobById(Long id) {
+    public JobPostingDTO getJobById(String id) {
         return jobRepo.findById(id).map(this::mapToDTO)
                 .orElseThrow(() -> new RuntimeException("Job not found"));
     }
@@ -80,7 +91,6 @@ public class JobPostingServiceImpl implements JobPostingService {
         dto.setId(null);
         List<ProgrammingLanguage> languages = getOrCreateLanguages(dto.getRequiredLanguages());
         
-        // Increment job count for each language
         languages.forEach(lang -> {
             lang.setJobCount(lang.getJobCount() + 1);
             langRepo.save(lang);
@@ -92,11 +102,10 @@ public class JobPostingServiceImpl implements JobPostingService {
     
     @Override
     @Transactional
-    public JobPostingDTO updateJob(Long id, JobPostingDTO dto) {
+    public JobPostingDTO updateJob(String id, JobPostingDTO dto) {
         JobPosting existingJob = jobRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Job not found with id " + id));
         
-        // Decrement job count for old languages
         if (existingJob.getRequiredLanguages() != null) {
             existingJob.getRequiredLanguages().forEach(lang -> {
                 lang.setJobCount(Math.max(0, lang.getJobCount() - 1));
@@ -106,7 +115,6 @@ public class JobPostingServiceImpl implements JobPostingService {
 
         List<ProgrammingLanguage> newLanguages = getOrCreateLanguages(dto.getRequiredLanguages());
         
-        // Increment job count for new languages
         newLanguages.forEach(lang -> {
             lang.setJobCount(lang.getJobCount() + 1);
             langRepo.save(lang);
@@ -115,7 +123,9 @@ public class JobPostingServiceImpl implements JobPostingService {
         existingJob.setTitle(dto.getTitle());
         existingJob.setCompany(dto.getCompany());
         existingJob.setLocation(dto.getLocation());
-        existingJob.setPostedDate(dto.getPostedDate());
+        if (dto.getPostedDate() != null && !dto.getPostedDate().isEmpty()) {
+            existingJob.setPostedDate(LocalDate.parse(dto.getPostedDate().split("T")[0]));
+        }
         existingJob.setSalary(dto.getSalary());
         existingJob.setCurrency(dto.getCurrency());
         existingJob.setExperienceLevel(dto.getExperienceLevel());
@@ -152,7 +162,7 @@ public class JobPostingServiceImpl implements JobPostingService {
 
     @Override
     @Transactional
-    public void deleteJob(Long id) {
+    public void deleteJob(String id) {
         jobRepo.findById(id).ifPresent(job -> {
             if (job.getRequiredLanguages() != null) {
                 job.getRequiredLanguages().forEach(lang -> {
@@ -165,11 +175,23 @@ public class JobPostingServiceImpl implements JobPostingService {
     }
 
     private List<ProgrammingLanguage> getOrCreateLanguages(List<String> languageNames) {
-        if (languageNames == null) return new ArrayList<>();
-        return languageNames.stream()
-            .map(name -> langRepo.findByName(name)
-                .orElseGet(() -> langRepo.save(ProgrammingLanguage.builder().name(name).jobCount(0).popularityScore(0.0).build())))
-            .collect(Collectors.toList());
+        if (languageNames == null || languageNames.isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        List<ProgrammingLanguage> existingLangs = langRepo.findAllByNameIn(languageNames);
+        Map<String, ProgrammingLanguage> existingLangsMap = existingLangs.stream()
+            .collect(Collectors.toMap(ProgrammingLanguage::getName, lang -> lang));
+
+        List<ProgrammingLanguage> result = new ArrayList<>();
+        for (String name : languageNames) {
+            ProgrammingLanguage lang = existingLangsMap.get(name);
+            if (lang == null) {
+                lang = langRepo.save(ProgrammingLanguage.builder().name(name).jobCount(0).popularityScore(0.0).build());
+            }
+            result.add(lang);
+        }
+        return result;
     }
 
     @Override
@@ -213,74 +235,97 @@ public class JobPostingServiceImpl implements JobPostingService {
 
     @Override
     public Map<String, Double> getAverageSalaryByIndustry() {
-        return jobRepo.findAll().stream()
-                // Use NACE Code for grouping if available, fallback to industry
-                .filter(job -> (job.getNaceCode() != null || job.getIndustry() != null) && job.getSalary() != null)
-                .collect(Collectors.groupingBy(
-                        job -> job.getNaceCode() != null ? job.getNaceCode() : job.getIndustry(),
-                        Collectors.averagingDouble(JobPosting::getSalary)
-                ));
+        return jobRepo.getAverageSalaryByIndustry().stream()
+            .collect(Collectors.toMap(AverageSalaryDTO::getName, AverageSalaryDTO::getValue));
     }
 
     @Override
     public Map<String, Long> getSalaryDistributionByExperience() {
-        return jobRepo.findAll().stream()
-                .filter(job -> job.getExperienceLevel() != null)
-                .collect(Collectors.groupingBy(
-                        JobPosting::getExperienceLevel,
-                        Collectors.counting()
-                ));
+        return jobRepo.getSalaryDistributionByExperience().stream()
+            .collect(Collectors.toMap(CountResultDTO::getName, CountResultDTO::getCount));
     }
 
     @Override
     public Map<String, Double> getRemoteVsOnsiteStats() {
-        return jobRepo.findAll().stream()
-                .filter(job -> job.getRemoteFlexibility() != null && job.getSalary() != null)
-                .collect(Collectors.groupingBy(
-                        JobPosting::getRemoteFlexibility,
-                        Collectors.averagingDouble(JobPosting::getSalary)
-                ));
+        return jobRepo.getRemoteVsOnsiteStats().stream()
+            .collect(Collectors.toMap(AverageSalaryDTO::getName, AverageSalaryDTO::getValue));
     }
 
     @Override
     public Map<String, Long> getEmploymentTypeDistribution() {
-        return jobRepo.findAll().stream()
-                .filter(job -> job.getEmploymentType() != null)
-                .collect(Collectors.groupingBy(
-                        JobPosting::getEmploymentType,
-                        Collectors.counting()
-                ));
+        return jobRepo.getEmploymentTypeDistribution().stream()
+            .collect(Collectors.toMap(CountResultDTO::getName, CountResultDTO::getCount));
     }
 
     @Override
     public Map<String, Long> getJobPostingsOverTime() {
-        // Group by just the YYYY-MM-DD part of the postedDate
-        return jobRepo.findAll().stream()
-                .filter(job -> job.getPostedDate() != null)
-                .collect(Collectors.groupingBy(
-                        job -> job.getPostedDate().split("T")[0],
-                        TreeMap::new, // Keep sorted by date
-                        Collectors.counting()
-                ));
+        return jobRepo.getJobPostingsOverTime().stream()
+            .collect(Collectors.toMap(CountResultDTO::getName, CountResultDTO::getCount, (v1, v2) -> v1, TreeMap::new));
     }
 
     @Override
     public Map<String, Long> getSubSectorsByNaceCode(String naceCode) {
-        return jobRepo.findAll().stream()
-                .filter(job -> naceCode.equals(job.getNaceCode()))
-                .collect(Collectors.groupingBy(
-                        JobPosting::getTitle, // We use the job title as the sub-sector proxy
-                        Collectors.counting()
-                ));
+        return jobRepo.getSubSectorsByNaceCode(naceCode).stream()
+            .collect(Collectors.toMap(CountResultDTO::getName, CountResultDTO::getCount));
     }
     
     @Override
     public Map<String, Long> getJobLocations() {
-        return jobRepo.findAll().stream()
-                .filter(job -> job.getLocation() != null && !job.getLocation().isEmpty())
-                .collect(Collectors.groupingBy(
-                        JobPosting::getLocation,
-                        Collectors.counting()
-                ));
+        return jobRepo.getJobLocations().stream()
+            .collect(Collectors.toMap(CountResultDTO::getName, CountResultDTO::getCount));
+    }
+
+    @Override
+    public List<KeyIndicatorDTO> getKeyIndicators() {
+        long totalJobs = jobRepo.count();
+        KeyIndicatorDTO totalJobsIndicator = new KeyIndicatorDTO("Total Active Jobs", String.format("%,d", totalJobs), "From live data");
+
+        // --- Fastest Growing Skill ---
+        LocalDate currentPeriodEnd = LocalDate.now();
+        LocalDate currentPeriodStart = currentPeriodEnd.minusDays(30);
+        LocalDate previousPeriodStart = currentPeriodEnd.minusDays(60);
+
+        Optional<SkillGrowthDTO> fastestGrowingSkillOpt = langRepo.findFastestGrowingSkill(
+            currentPeriodEnd, 
+            currentPeriodStart, 
+            previousPeriodStart
+        );
+
+        KeyIndicatorDTO fastestGrowingSkillIndicator = fastestGrowingSkillOpt
+            .map(skill -> new KeyIndicatorDTO(
+                "Fastest Growing Skill", 
+                skill.getSkillName(), 
+                String.format("%+.2f%% MoM", skill.getGrowthPercentage())
+            ))
+            .orElseGet(() -> {
+                // Fallback logic: if no growth data, find the top skill by volume
+                List<ProgrammingLanguage> topSkills = langRepo.findTop5ByOrderByJobCountDesc();
+                if (topSkills.isEmpty()) {
+                    return new KeyIndicatorDTO("Fastest Growing Skill", "N/A", "Insufficient data");
+                } else {
+                    return new KeyIndicatorDTO("Top Skill (by volume)", topSkills.get(0).getName(), String.format("%,d jobs", topSkills.get(0).getJobCount()));
+                }
+            });
+
+
+        List<CountResultDTO> topRoleList = jobRepo.findTopRole();
+        KeyIndicatorDTO topDemandedRoleIndicator;
+        if (topRoleList.isEmpty()) {
+            topDemandedRoleIndicator = new KeyIndicatorDTO("Top Demanded Role", "N/A", "");
+        } else {
+            CountResultDTO topRoleResult = topRoleList.get(0);
+            topDemandedRoleIndicator = new KeyIndicatorDTO("Top Demanded Role", topRoleResult.getName(), String.format("%,d mentions", topRoleResult.getCount()));
+        }
+
+        List<CountResultDTO> topIndustryList = jobRepo.findTopIndustry();
+        KeyIndicatorDTO topIndustryIndicator;
+        if (topIndustryList.isEmpty()) {
+            topIndustryIndicator = new KeyIndicatorDTO("Top Industry", "N/A", "");
+        } else {
+            CountResultDTO topIndustryResult = topIndustryList.get(0);
+            topIndustryIndicator = new KeyIndicatorDTO("Top Industry", topIndustryResult.getName(), String.format("%,d jobs", topIndustryResult.getCount()));
+        }
+
+        return Arrays.asList(totalJobsIndicator, fastestGrowingSkillIndicator, topDemandedRoleIndicator, topIndustryIndicator);
     }
 }

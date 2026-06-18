@@ -37,6 +37,11 @@ import { EmptyState } from "./ui/EmptyState";
 import { formatValue, calculateTotal } from "../utils/chartUtils";
 import { useDragScroll } from "../utils/useDragScroll";
 
+import HeatmapChart from "./recharts/HeatmapChart";
+import TreemapChart from "./recharts/TreemapChart";
+import BubbleChart from "./recharts/BubbleChart";
+import RadarChart from "./recharts/RadarChart";
+
 const getThemeColor = (index: number) => {
     return `hsl(var(--chart-${(index % 5) + 1}))`;
 };
@@ -342,8 +347,16 @@ export default function AnalyticsCharts({ initialLoadedChart }: { initialLoadedC
                                     <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value: any) => [value, chart.yAxisLabel || 'Value']} />
                                     <Legend />
                                 </PieChart>
+                            ) : chart.chartType === 'heatmap' ? (
+                                <HeatmapChart data={chart.data} />
+                            ) : chart.chartType === 'treemap' ? (
+                                <TreemapChart data={chart.data} />
+                            ) : chart.chartType === 'bubble' ? (
+                                <BubbleChart data={chart.data} />
+                            ) : chart.chartType === 'radar' ? (
+                                <RadarChart data={chart.data} />
                             ) : (
-                                <div className="flex items-center justify-center h-full text-muted-foreground">Unsupported chart type from AI/Save</div>
+                                <div className="flex items-center justify-center h-full text-muted-foreground">Unsupported chart type from AI/Save: {chart.chartType}</div>
                             )}
                         </ResponsiveContainer>
                     </div>

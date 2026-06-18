@@ -2,6 +2,7 @@ package org.example.dashboardj.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.example.dashboardj.dto.JobPostingDTO;
+import org.example.dashboardj.dto.KeyIndicatorDTO;
 import org.example.dashboardj.service.JobPostingService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -30,7 +31,7 @@ public class JobPostingController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<JobPostingDTO> getJobById(@PathVariable Long id) {
+    public ResponseEntity<JobPostingDTO> getJobById(@PathVariable String id) {
         return ResponseEntity.ok(service.getJobById(id));
     }
 
@@ -42,7 +43,7 @@ public class JobPostingController {
 
     // Updates an existing job
     @PutMapping("/{id}")
-    public ResponseEntity<JobPostingDTO> updateJob(@PathVariable Long id, @RequestBody JobPostingDTO dto) {
+    public ResponseEntity<JobPostingDTO> updateJob(@PathVariable String id, @RequestBody JobPostingDTO dto) {
         return ResponseEntity.ok(service.updateJob(id, dto));
     }
 
@@ -53,7 +54,7 @@ public class JobPostingController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteJob(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteJob(@PathVariable String id) {
         service.deleteJob(id);
         return ResponseEntity.noContent().build();
     }
@@ -67,6 +68,11 @@ public class JobPostingController {
     }
 
     // Analytics Endpoints
+
+    @GetMapping("/stats/key-indicators")
+    public ResponseEntity<List<KeyIndicatorDTO>> getKeyIndicators() {
+        return ResponseEntity.ok(service.getKeyIndicators());
+    }
 
     @GetMapping("/stats/salary-by-industry")
     public ResponseEntity<Map<String, Double>> getAverageSalaryByIndustry() {

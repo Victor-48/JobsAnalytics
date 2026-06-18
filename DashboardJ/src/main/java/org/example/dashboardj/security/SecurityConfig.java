@@ -3,6 +3,7 @@ package org.example.dashboardj.security;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -34,12 +35,16 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/jobs/stats/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/languages/**").permitAll()
                         // Require authentication for job modifications
-                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/jobs/**").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/jobs/**").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/jobs/**").hasRole("ADMIN")
-                        // Allow GET requests to everyone (public dashboard)
-                        .anyRequest().permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/jobs/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/jobs/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/jobs/**").hasRole("ADMIN")
+                        // Allow all other GET requests
+                        .requestMatchers(HttpMethod.GET).permitAll()
+                        // Authenticate any other request
+                        .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
@@ -64,7 +69,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(List.of("*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

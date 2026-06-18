@@ -7,9 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class AuthResponse {
-    private String token;
-    private String email;
-    private String fullName;
-    private String role;
+public class AverageSalaryDTO {
+    private String name;
+    private Double value;
 }

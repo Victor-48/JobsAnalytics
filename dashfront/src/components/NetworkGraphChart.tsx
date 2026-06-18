@@ -1,90 +1,126 @@
-import React, { useEffect, useState, useRef } from 'react';
-import ForceGraph2D from 'react-force-graph-2d';
+import React, { useEffect, useState, useRef, memo, useMemo } from 'react';
+import ForceGraph2D, { ForceGraphMethods, NodeObject, LinkObject } from 'react-force-graph-2d';
 import DOMPurify from 'dompurify';
-import { fetchTechStackNetworkGraph } from '../api/jobApi';
+import type { GraphData } from '../api/jobApi';
 
-export default function NetworkGraphChart() {
-    const [graphData, setGraphData] = useState({ nodes: [], links: [] });
-    const [isLoading, setIsLoading] = useState(true);
+interface NetworkGraphChartProps {
+    data: GraphData;
+    highlightedNode: NodeObject | null;
+    onNodeClick: (node: NodeObject) => void;
+    onBackgroundClick: () => void;
+}
+
+const MemoizedNetworkGraphChart = ({ data, highlightedNode, onNodeClick, onBackgroundClick }: NetworkGraphChartProps) => {
     const containerRef = useRef<HTMLDivElement>(null);
+    const fgRef = useRef<ForceGraphMethods>();
     const [dimensions, setDimensions] = useState({ width: 0, height: 400 });
 
-    useEffect(() => {
-        // Fetch network data
-        fetchTechStackNetworkGraph()
-            .then(data => {
-                if (data && data.nodes && data.links) {
-                    const sanitizedNodes = data.nodes.map((node: any) => ({
-                        ...node,
-                        name: DOMPurify.sanitize(node.name || '')
-                    }));
-                    
-                    setGraphData({
-                        nodes: sanitizedNodes as any,
-                        links: data.links as any
-                    });
-                }
-            })
-            .catch(console.error)
-            .finally(() => setIsLoading(false));
-    }, []);
+    const sanitizedData = useMemo(() => ({
+        nodes: data.nodes.map(node => ({
+            ...node,
+            id: DOMPurify.sanitize(node.id || '')
+        })),
+        links: data.links,
+    }), [data]);
+
+    const { highlightedNodes, highlightedLinks } = useMemo(() => {
+        if (!highlightedNode) {
+            return { highlightedNodes: new Set(), highlightedLinks: new Set() };
+        }
+
+        const nodes = new Set([highlightedNode.id]);
+        const links = new Set();
+
+        sanitizedData.links.forEach((link: any) => {
+            if (link.source.id === highlightedNode.id) {
+                nodes.add(link.target.id);
+                links.add(link);
+            } else if (link.target.id === highlightedNode.id) {
+                nodes.add(link.source.id);
+                links.add(link);
+            }
+        });
+
+        return { highlightedNodes: nodes, highlightedLinks: links };
+    }, [highlightedNode, sanitizedData.links]);
 
     useEffect(() => {
         const updateDimensions = () => {
             if (containerRef.current) {
-                // Read exact layout width computed by CSS Grid
                 setDimensions({
                     width: containerRef.current.offsetWidth,
-                    height: 400 // Fixed height
+                    height: 400,
                 });
             }
         };
 
-        // Initial setup and listener
         updateDimensions();
         window.addEventListener('resize', updateDimensions);
-
         return () => window.removeEventListener('resize', updateDimensions);
-    }, [isLoading]);
+    }, []);
 
-    if (isLoading) {
-        return <div className="h-[400px] flex items-center justify-center bg-muted/20 rounded-xl border border-border text-muted-foreground animate-pulse">Loading network graph...</div>;
+    if (!data || data.nodes.length === 0) {
+        return <div className="h-[400px] flex items-center justify-center bg-muted/20 rounded-xl border border-dashed border-border text-muted-foreground">Not enough data to render the network graph.</div>;
     }
 
-    if (graphData.nodes.length === 0) {
-        return <div className="h-[400px] flex items-center justify-center bg-muted/20 rounded-xl border border-dashed border-border text-muted-foreground">Not enough data to map tech stack relationships.</div>;
-    }
+    const getCssVar = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    const nodeColor = `hsl(${getCssVar('--primary')})`;
+    const linkColor = `hsl(${getCssVar('--border')})`;
+    const textColor = `hsl(${getCssVar('--foreground')})`;
+    const bgColor = `hsl(${getCssVar('--card')})`;
 
-    // Helper to get CSS variable values for colors
-    const getCssVar = (name: string) => {
-        return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    const getNodeColor = (node: NodeObject) => {
+        if (highlightedNode && !highlightedNodes.has(node.id as string)) {
+            return `${nodeColor}80`; // 50% opacity
+        }
+        return nodeColor;
     };
 
-    // Construct valid HSL strings from the CSS variables
-    const jobColor = `hsl(${getCssVar('--primary')})`;
-    const langColor = `hsl(${getCssVar('--chart-2')})`;
-    const linkColor = `hsl(${getCssVar('--border')})`;
-    const bgColor = `hsl(${getCssVar('--card')})`;
+    const getLinkColor = (link: LinkObject) => {
+        if (highlightedNode && !highlightedLinks.has(link)) {
+            return `${linkColor}80`; // 50% opacity
+        }
+        return linkColor;
+    };
 
     return (
         <div ref={containerRef} className="w-full h-[400px] rounded-xl overflow-hidden border border-border bg-card flex items-center justify-center relative z-0">
             {dimensions.width > 0 && (
                 <ForceGraph2D
+                    ref={fgRef}
                     width={dimensions.width}
                     height={dimensions.height}
-                    graphData={graphData}
-                    nodeLabel="name"
-                    nodeColor={(node: any) => node.group === 1 ? jobColor : langColor} // Jobs = primary, Languages = secondary chart color
-                    nodeRelSize={6}
-                    linkColor={() => linkColor}
-                    linkWidth={1.5}
+                    graphData={sanitizedData}
+                    
+                    nodeVal={node => node.value || 1}
+                    nodeRelSize={4}
+                    nodeColor={getNodeColor}
+                    linkColor={getLinkColor}
+                    linkWidth={link => Math.max(1, (link.value || 1) / 5)}
+                    
+                    nodeCanvasObject={(node: NodeObject, ctx: CanvasRenderingContext2D, globalScale: number) => {
+                        const label = node.id as string;
+                        const fontSize = 12 / globalScale;
+                        ctx.font = `${fontSize}px Sans-Serif`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = highlightedNode && !highlightedNodes.has(node.id as string) ? `${textColor}80` : textColor;
+                        ctx.fillText(label, node.x || 0, (node.y || 0) + 12);
+                    }}
+                    nodeCanvasObjectMode={() => 'after'}
+
+                    onNodeClick={onNodeClick}
+                    onBackgroundClick={onBackgroundClick}
+
                     backgroundColor={bgColor}
+                    cooldownTicks={100} 
+                    onEngineStop={() => fgRef.current?.pauseAnimation()}
                     enableNodeDrag={true}
                     enableZoomInteraction={true}
-                    d3AlphaDecay={0.01}
-                    d3VelocityDecay={0.08}
                 />
             )}
         </div>
     );
-}
+};
+
+export const NetworkGraphChart = memo(MemoizedNetworkGraphChart);

@@ -5,22 +5,28 @@ import org.springframework.data.neo4j.core.schema.GeneratedValue;
 import org.springframework.data.neo4j.core.schema.Id;
 import org.springframework.data.neo4j.core.schema.Node;
 import org.springframework.data.neo4j.core.schema.Relationship;
+import org.springframework.data.neo4j.core.support.UUIDStringGenerator;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Node("JobPosting")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString(exclude = "requiredLanguages") // Exclude relationship field from toString
 public class JobPosting {
-    @Id @GeneratedValue
-    private Long id;
+    @Id
+    @GeneratedValue(UUIDStringGenerator.class)
+    private String id;
 
     private String title;
     private String company;
     private String location;
-    private String postedDate;
+
+    private LocalDate postedDate;
 
     private Double salary;
     private String currency;
