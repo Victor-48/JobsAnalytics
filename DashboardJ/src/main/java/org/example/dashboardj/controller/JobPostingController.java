@@ -99,6 +99,13 @@ public class JobPostingController {
         return ResponseEntity.ok(service.getSubSectorsByNaceCode(naceCode));
     }
 
+    @GetMapping("/by-skills")
+    public ResponseEntity<Map<String, Long>> getJobTitlesBySkills(
+            @RequestParam String skill1,
+            @RequestParam String skill2) {
+        return ResponseEntity.ok(service.getJobTitlesBySkills(skill1, skill2));
+    }
+
     // New Time-Series Endpoint
     @GetMapping("/stats/postings-over-time")
     public ResponseEntity<Map<String, Long>> getJobPostingsOverTime() {

@@ -1,8 +1,7 @@
 package org.example.dashboardj.repository;
 
-import org.example.dashboardj.dto.GraphDataDTO;
-import org.example.dashboardj.dto.GraphLinkDTO;
 import org.example.dashboardj.dto.SkillGrowthDTO;
+import org.example.dashboardj.dto.SkillJobCountDTO;
 import org.example.dashboardj.entity.ProgrammingLanguage;
 import org.springframework.data.neo4j.repository.Neo4jRepository;
 import org.springframework.data.neo4j.repository.query.Query;
@@ -21,9 +20,12 @@ public interface ProgrammingLanguageRepository extends Neo4jRepository<Programmi
 
     List<ProgrammingLanguage> findAllByNameIn(Collection<String> names);
 
+    @Query("MATCH (l:ProgrammingLanguage) WHERE l.name IN $names RETURN l.name as name, l.jobCount as jobCount")
+    List<SkillJobCountDTO> findJobCountsByNames(@Param("names") Collection<String> names);
+
     @Query("MATCH (j:JobPosting)-[:REQUIRES]->(l:ProgrammingLanguage) " +
            "WITH l, count(j) as computedJobCount " +
-           "RETURN l.id as id, l.name as name, computedJobCount as jobCount, l.popularityScore as popularityScore " +
+           "RETURN l.name as name, computedJobCount as jobCount, l.popularityScore as popularityScore " +
            "ORDER BY jobCount DESC LIMIT 5")
     List<ProgrammingLanguage> findTop5ByOrderByJobCountDesc();
 
@@ -44,9 +46,4 @@ public interface ProgrammingLanguageRepository extends Neo4jRepository<Programmi
         @Param("currentPeriodStart") LocalDate currentPeriodStart,
         @Param("previousPeriodStart") LocalDate previousPeriodStart
     );
-    @Query("MATCH (l1:ProgrammingLanguage)<-[:REQUIRES]-(j:JobPosting)-[:REQUIRES]->(l2:ProgrammingLanguage) " +
-            "WHERE id(l1) < id(l2) " +
-            "RETURN l1.name AS source, l2.name AS target, count(j) AS value " +
-            "ORDER BY value DESC LIMIT 50")
-    List<GraphLinkDTO> getLanguageCoOccurrences();
 }

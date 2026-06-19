@@ -8,14 +8,15 @@ import org.example.dashboardj.repository.JobPostingRepository;
 import org.example.dashboardj.repository.ProgrammingLanguageRepository;
 import org.example.dashboardj.service.JobPostingService;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -76,7 +77,7 @@ public class JobPostingServiceImpl implements JobPostingService {
 
     @Override
     public List<JobPostingDTO> getAllJobs() {
-        return jobRepo.findAll().stream().map(this::mapToDTO).collect(Collectors.toList());
+        return jobRepo.findAllJobSummaries();
     }
 
     @Override
@@ -212,25 +213,25 @@ public class JobPostingServiceImpl implements JobPostingService {
 
     @Override
     public Page<JobPostingDTO> getAllJobs(Pageable pageable, String remoteFlexibility, String industry) {
-        List<JobPosting> allJobs = jobRepo.findAll();
-        
-        List<JobPostingDTO> filteredJobs = allJobs.stream()
-            .filter(j -> remoteFlexibility == null || remoteFlexibility.isEmpty() || remoteFlexibility.equalsIgnoreCase(j.getRemoteFlexibility()))
-            .filter(j -> industry == null || industry.isEmpty() || industry.equalsIgnoreCase(j.getNaceCode()) || industry.equalsIgnoreCase(j.getIndustry()))
-            .map(this::mapToDTO)
-            .collect(Collectors.toList());
+        List<JobPostingDTO> allJobs = jobRepo.findAllJobSummaries();
 
-        int start = (int) pageable.getOffset();
-        int end = Math.min((start + pageable.getPageSize()), filteredJobs.size());
-        
-        List<JobPostingDTO> pageContent;
-        if (start > filteredJobs.size()) {
-            pageContent = new ArrayList<>();
-        } else {
-            pageContent = filteredJobs.subList(start, end);
+        Stream<JobPostingDTO> stream = allJobs.stream();
+
+        if (remoteFlexibility != null && !remoteFlexibility.isEmpty()) {
+            stream = stream.filter(j -> remoteFlexibility.equalsIgnoreCase(j.getRemoteFlexibility()));
+        }
+        if (industry != null && !industry.isEmpty()) {
+            stream = stream.filter(j -> industry.equalsIgnoreCase(j.getIndustry()) || industry.equalsIgnoreCase(j.getNaceCode()));
         }
 
-        return new org.springframework.data.domain.PageImpl<>(pageContent, pageable, filteredJobs.size());
+        List<JobPostingDTO> filteredDtos = stream.collect(Collectors.toList());
+
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), filteredDtos.size());
+        
+        List<JobPostingDTO> pageContent = start > filteredDtos.size() ? Collections.emptyList() : filteredDtos.subList(start, end);
+
+        return new PageImpl<>(pageContent, pageable, filteredDtos.size());
     }
 
     @Override
@@ -272,6 +273,12 @@ public class JobPostingServiceImpl implements JobPostingService {
     @Override
     public Map<String, Long> getJobLocations() {
         return jobRepo.getJobLocations().stream()
+            .collect(Collectors.toMap(CountResultDTO::getName, CountResultDTO::getCount));
+    }
+
+    @Override
+    public Map<String, Long> getJobTitlesBySkills(String skill1, String skill2) {
+        return jobRepo.findJobTitlesBySkills(skill1, skill2).stream()
             .collect(Collectors.toMap(CountResultDTO::getName, CountResultDTO::getCount));
     }
 

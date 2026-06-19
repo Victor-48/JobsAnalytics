@@ -8,9 +8,28 @@ interface NetworkGraphChartProps {
     highlightedNode: NodeObject | null;
     onNodeClick: (node: NodeObject) => void;
     onBackgroundClick: () => void;
+    onLinkClick?: (link: LinkObject) => void;
 }
 
-const MemoizedNetworkGraphChart = ({ data, highlightedNode, onNodeClick, onBackgroundClick }: NetworkGraphChartProps) => {
+// --- Robust Color Converter ---
+// Converts any valid CSS color string to an RGBA string with a given alpha.
+const toRgba = (color: string, alpha: number): string => {
+    // This is a robust way to get the RGB values of any CSS color.
+    const tempDiv = document.createElement('div');
+    tempDiv.style.color = color;
+    document.body.appendChild(tempDiv);
+    const computedColor = getComputedStyle(tempDiv).color;
+    document.body.removeChild(tempDiv);
+
+    const rgb = computedColor.match(/\d+/g);
+    if (rgb && rgb.length >= 3) {
+        return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
+    }
+    return 'rgba(0, 0, 0, 0.5)'; // Fallback
+};
+
+
+const MemoizedNetworkGraphChart = ({ data, highlightedNode, onNodeClick, onBackgroundClick, onLinkClick }: NetworkGraphChartProps) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const fgRef = useRef<ForceGraphMethods>();
     const [dimensions, setDimensions] = useState({ width: 0, height: 400 });
@@ -70,17 +89,13 @@ const MemoizedNetworkGraphChart = ({ data, highlightedNode, onNodeClick, onBackg
     const bgColor = `hsl(${getCssVar('--card')})`;
 
     const getNodeColor = (node: NodeObject) => {
-        if (highlightedNode && !highlightedNodes.has(node.id as string)) {
-            return `${nodeColor}80`; // 50% opacity
-        }
-        return nodeColor;
+        const isHighlighted = !highlightedNode || highlightedNodes.has(node.id as string);
+        return toRgba(nodeColor, isHighlighted ? 1.0 : 0.2);
     };
 
     const getLinkColor = (link: LinkObject) => {
-        if (highlightedNode && !highlightedLinks.has(link)) {
-            return `${linkColor}80`; // 50% opacity
-        }
-        return linkColor;
+        const isHighlighted = !highlightedNode || highlightedLinks.has(link);
+        return toRgba(linkColor, isHighlighted ? 0.7 : 0.1);
     };
 
     return (
@@ -96,7 +111,10 @@ const MemoizedNetworkGraphChart = ({ data, highlightedNode, onNodeClick, onBackg
                     nodeRelSize={4}
                     nodeColor={getNodeColor}
                     linkColor={getLinkColor}
-                    linkWidth={link => Math.max(1, (link.value || 1) / 5)}
+                    linkWidth={link => {
+                        const isHighlighted = !highlightedNode || highlightedLinks.has(link);
+                        return isHighlighted ? Math.max(1, (link.value || 1) / 5) : 1;
+                    }}
                     
                     nodeCanvasObject={(node: NodeObject, ctx: CanvasRenderingContext2D, globalScale: number) => {
                         const label = node.id as string;
@@ -104,13 +122,15 @@ const MemoizedNetworkGraphChart = ({ data, highlightedNode, onNodeClick, onBackg
                         ctx.font = `${fontSize}px Sans-Serif`;
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';
-                        ctx.fillStyle = highlightedNode && !highlightedNodes.has(node.id as string) ? `${textColor}80` : textColor;
+                        const isHighlighted = !highlightedNode || highlightedNodes.has(node.id as string);
+                        ctx.fillStyle = toRgba(textColor, isHighlighted ? 1.0 : 0.3);
                         ctx.fillText(label, node.x || 0, (node.y || 0) + 12);
                     }}
                     nodeCanvasObjectMode={() => 'after'}
 
                     onNodeClick={onNodeClick}
                     onBackgroundClick={onBackgroundClick}
+                    onLinkClick={onLinkClick}
 
                     backgroundColor={bgColor}
                     cooldownTicks={100} 

@@ -5,14 +5,17 @@ import org.example.dashboardj.dto.GraphDataDTO;
 import org.example.dashboardj.dto.GraphLinkDTO;
 import org.example.dashboardj.dto.GraphNodeDTO;
 import org.example.dashboardj.dto.ProgrammingLanguageDTO;
+import org.example.dashboardj.dto.SkillJobCountDTO;
 import org.example.dashboardj.entity.ProgrammingLanguage;
 import org.example.dashboardj.repository.ProgrammingLanguageRepository;
 import org.example.dashboardj.service.ProgrammingLanguageService;
 import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -94,26 +97,57 @@ public class ProgrammingLanguageServiceImpl implements ProgrammingLanguageServic
     }
 
     @Override
-    public GraphDataDTO getCoOccurrenceGraph() {
-        List<GraphLinkDTO> links = repository.getLanguageCoOccurrences();
+    public GraphDataDTO getSkillCoOccurrenceGraph(LocalDate startDate, LocalDate endDate) {
+        String baseQuery = "MATCH (l1:ProgrammingLanguage)<-[:REQUIRES]-(j:JobPosting)-[:REQUIRES]->(l2:ProgrammingLanguage) ";
+        String dateFilter = "WHERE j.postedDate >= $startDate AND j.postedDate <= $endDate ";
+        String remainderQuery = "WITH l1, l2, j WHERE l1.name < l2.name RETURN l1.name as source, l2.name as target, count(j) as value ORDER BY value DESC LIMIT 50";
 
-        Set<String> nodeIds = new HashSet<>();
-        for (GraphLinkDTO link : links) {
-            nodeIds.add(link.getSource());
-            nodeIds.add(link.getTarget());
+        String finalQuery;
+        Neo4jClient.RunnableSpec querySpec;
+
+        if (startDate != null && endDate != null) {
+            finalQuery = baseQuery + dateFilter + remainderQuery;
+            querySpec = neo4jClient.query(finalQuery).bind(startDate).to("startDate").bind(endDate).to("endDate");
+        } else {
+            finalQuery = baseQuery + remainderQuery;
+            querySpec = neo4jClient.query(finalQuery);
         }
 
-        List<ProgrammingLanguage> langDetails = repository.findAllByNameIn(nodeIds);
-        Map<String, ProgrammingLanguage> langMap = langDetails.stream()
-                .collect(Collectors.toMap(ProgrammingLanguage::getName, Function.identity()));
+        Collection<Map<String, Object>> results = querySpec.fetch().all();
+
+        List<GraphLinkDTO> links = new ArrayList<>();
+        Set<String> nodeIds = new HashSet<>();
+
+        for (Map<String, Object> row : results) {
+            String source = (String) row.get("source");
+            String target = (String) row.get("target");
+            Long value = (Long) row.get("value");
+
+            if (source != null && target != null && value != null) {
+                links.add(new GraphLinkDTO(source, target, value));
+                nodeIds.add(source);
+                nodeIds.add(target);
+            }
+        }
+
+        if (nodeIds.isEmpty()) {
+            return new GraphDataDTO(new ArrayList<>(), new ArrayList<>());
+        }
+
+        List<SkillJobCountDTO> jobCounts = repository.findJobCountsByNames(nodeIds);
+        Map<String, Integer> jobCountMap = jobCounts.stream()
+            .collect(Collectors.toMap(
+                SkillJobCountDTO::getName,
+                SkillJobCountDTO::getJobCount,
+                (existing, replacement) -> existing
+            ));
 
         List<GraphNodeDTO> nodes = nodeIds.stream()
-                .map(id -> {
-                    ProgrammingLanguage lang = langMap.get(id);
-                    Integer jobCount = (lang != null && lang.getJobCount() != null) ? lang.getJobCount() : 1;
-                    return new GraphNodeDTO(id, jobCount, "default");
-                })
-                .collect(Collectors.toList());
+            .map(id -> {
+                int jobCount = jobCountMap.getOrDefault(id, 1);
+                return new GraphNodeDTO(id, jobCount, "default");
+            })
+            .collect(Collectors.toList());
 
         return new GraphDataDTO(nodes, links);
     }

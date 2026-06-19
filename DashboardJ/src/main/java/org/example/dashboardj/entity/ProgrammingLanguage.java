@@ -13,7 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString(exclude = "jobPostings") // Exclude relationship field from toString
+@ToString(exclude = "jobPostings")
 public class ProgrammingLanguage {
 
     @Id

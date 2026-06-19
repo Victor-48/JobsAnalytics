@@ -8,7 +8,13 @@ import { RoleSwitcher } from "../components/RoleSwitcher";
 import MapChart, { type MapViewState } from "../components/MapChart";
 import KeyIndicators from "../components/KeyIndicators";
 import { NetworkGraphChart } from "../components/NetworkGraphChart";
-import type { NodeObject } from 'force-graph';
+import { GraphLegend } from "../components/GraphLegend";
+import { CoOccurrenceModal } from "../components/CoOccurrenceModal";
+import { DateRangePicker } from "../components/DateRangePicker";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
+import type { NodeObject, LinkObject } from 'force-graph';
+import type { DateRange } from "react-day-picker";
 
 // --- MapCard Props ---
 interface MapCardProps {
@@ -84,10 +90,15 @@ export default function Dashboard() {
 
     const [isMapActive, setMapActive] = useState(false);
     const [highlightedNode, setHighlightedNode] = useState<NodeObject | null>(null);
+    const [selectedLink, setSelectedLink] = useState<LinkObject | null>(null);
+    const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
-    const { data: coOccurrenceData, isLoading: isGraphLoading } = useQuery({
-        queryKey: ["skillCoOccurrence"],
-        queryFn: fetchSkillCoOccurrence,
+    const { data: coOccurrenceData, isFetching: isGraphFetching } = useQuery({
+        queryKey: ["skillCoOccurrence", dateRange],
+        queryFn: () => fetchSkillCoOccurrence(
+            dateRange?.from?.toISOString().split('T')[0],
+            dateRange?.to?.toISOString().split('T')[0]
+        ),
     });
 
     useEffect(() => {
@@ -177,29 +188,55 @@ export default function Dashboard() {
                         <MapCard {...mapCardProps} />
 
                         {/* Network */}
-                        <div className="w-full bg-card p-6 rounded-2xl border border-border">
-                            <h2 className="text-xl font-bold mb-4">
-                                Skill Co-occurrence Network
-                            </h2>
+                        <div className="w-full bg-card p-6 rounded-2xl border border-border flex flex-col">
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-xl font-bold">
+                                    Skill Co-occurrence Network
+                                </h2>
+                                <div className="flex items-center gap-2">
+                                    <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+                                    {dateRange && (
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            onClick={() => setDateRange(undefined)}
+                                            title="Reset date range"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
 
-                            <div className="min-h-[400px]">
-                                {isGraphLoading ? (
-                                    <p>Loading graph...</p>
-                                ) : (
-                                    coOccurrenceData && (
-                                        <NetworkGraphChart 
-                                            data={coOccurrenceData} 
-                                            highlightedNode={highlightedNode}
-                                            onNodeClick={setHighlightedNode}
-                                            onBackgroundClick={() => setHighlightedNode(null)}
-                                        />
-                                    )
+                            <div className="min-h-[400px] flex-grow relative">
+                                {isGraphFetching && (
+                                    <div className="absolute inset-0 bg-card/50 backdrop-blur-sm flex items-center justify-center z-10">
+                                        <p>Loading graph...</p>
+                                    </div>
+                                )}
+                                {coOccurrenceData && (
+                                    <NetworkGraphChart 
+                                        data={coOccurrenceData} 
+                                        highlightedNode={highlightedNode}
+                                        onNodeClick={setHighlightedNode}
+                                        onBackgroundClick={() => setHighlightedNode(null)}
+                                        onLinkClick={setSelectedLink}
+                                    />
                                 )}
                             </div>
+                            <GraphLegend />
                         </div>
                     </div>
                 </div>
             </main>
+
+            {selectedLink && (
+                <CoOccurrenceModal 
+                    skill1={(selectedLink.source as NodeObject).id as string}
+                    skill2={(selectedLink.target as NodeObject).id as string}
+                    onClose={() => setSelectedLink(null)}
+                />
+            )}
 
             {/* Fullscreen Map */}
             {isMapMaximized && (

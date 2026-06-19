@@ -10,14 +10,14 @@ import java.util.Map;
 
 public interface JobPostingService {
     Page<JobPostingDTO> getAllJobs(Pageable pageable, String remoteFlexibility, String industry);
-    List<JobPostingDTO> getAllJobs(); // Added back for backwards compatibility
+    List<JobPostingDTO> getAllJobs();
     JobPostingDTO getJobById(String id);
     JobPostingDTO createJob(JobPostingDTO dto);
     JobPostingDTO updateJob(String id, JobPostingDTO dto);
     List<JobPostingDTO> createJobs(List<JobPostingDTO> dtos); // Bulk insert method
     void deleteJob(String id);
     Page<JobPostingDTO> searchByTitle(String title, Pageable pageable);
-    List<JobPostingDTO> searchByTitle(String title); // Added back for backwards compatibility
+    List<JobPostingDTO> searchByTitle(String title);
     
     // Analytics methods
     Map<String, Double> getAverageSalaryByIndustry();
@@ -26,6 +26,7 @@ public interface JobPostingService {
     Map<String, Long> getEmploymentTypeDistribution();
     Map<String, Long> getSubSectorsByNaceCode(String naceCode);
     Map<String, Long> getJobLocations();
+    Map<String, Long> getJobTitlesBySkills(String skill1, String skill2);
     
     // Time Series
     Map<String, Long> getJobPostingsOverTime();

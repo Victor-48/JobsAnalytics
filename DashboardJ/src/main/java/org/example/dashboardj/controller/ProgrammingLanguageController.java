@@ -4,9 +4,11 @@ import lombok.RequiredArgsConstructor;
 import org.example.dashboardj.dto.GraphDataDTO;
 import org.example.dashboardj.dto.ProgrammingLanguageDTO;
 import org.example.dashboardj.service.ProgrammingLanguageService;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -56,7 +58,9 @@ public class ProgrammingLanguageController {
     }
 
     @GetMapping("/co-occurrence")
-    public ResponseEntity<GraphDataDTO> getLanguageCoOccurrenceGraph() {
-        return ResponseEntity.ok(service.getCoOccurrenceGraph());
+    public ResponseEntity<GraphDataDTO> getLanguageCoOccurrenceGraph(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return ResponseEntity.ok(service.getSkillCoOccurrenceGraph(startDate, endDate));
     }
 }

@@ -75,8 +75,19 @@ export async function fetchKeyIndicators(): Promise<KeyIndicator[]> {
     return response.data;
 }
 
-export async function fetchSkillCoOccurrence(): Promise<GraphData> {
-    const response: AxiosResponse<GraphData> = await api.get("/languages/co-occurrence");
+export async function fetchSkillCoOccurrence(startDate?: string, endDate?: string): Promise<GraphData> {
+    const params: Record<string, string> = {};
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+
+    const response: AxiosResponse<GraphData> = await api.get("/languages/co-occurrence", { params });
+    return response.data;
+}
+
+export async function fetchJobTitlesBySkills(skill1: string, skill2: string): Promise<Record<string, number>> {
+    const response: AxiosResponse<Record<string, number>> = await api.get("/jobs/by-skills", {
+        params: { skill1, skill2 }
+    });
     return response.data;
 }
 
@@ -115,10 +126,7 @@ export async function fetchJobLocations(): Promise<Record<string, number>> {
     return response.data;
 }
 
-// LLM endpoints
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function queryLlmChart(query: string): Promise<any> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response: AxiosResponse<any> = await api.post("/llm/query", { query });
     return response.data;
 }

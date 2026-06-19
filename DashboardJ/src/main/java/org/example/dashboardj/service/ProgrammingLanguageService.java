@@ -3,6 +3,7 @@ package org.example.dashboardj.service;
 import org.example.dashboardj.dto.GraphDataDTO;
 import org.example.dashboardj.dto.ProgrammingLanguageDTO;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface ProgrammingLanguageService {
@@ -21,5 +22,5 @@ public interface ProgrammingLanguageService {
 
     List<ProgrammingLanguageDTO> searchLanguages(String name);
 
-    GraphDataDTO getCoOccurrenceGraph();
+    GraphDataDTO getSkillCoOccurrenceGraph(LocalDate startDate, LocalDate endDate);
 }

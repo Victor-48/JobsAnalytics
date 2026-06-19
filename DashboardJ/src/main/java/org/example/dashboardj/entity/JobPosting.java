@@ -16,7 +16,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString(exclude = "requiredLanguages") // Exclude relationship field from toString
+@ToString(exclude = "requiredLanguages")
 public class JobPosting {
     @Id
     @GeneratedValue(UUIDStringGenerator.class)
