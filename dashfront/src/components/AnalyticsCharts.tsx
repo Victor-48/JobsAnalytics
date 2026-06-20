@@ -64,7 +64,7 @@ const dropAnimationConfig = {
   }),
 };
 
-export default function AnalyticsCharts({ initialLoadedChart }: { initialLoadedChart?: any }) {
+export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewModeChange }: { initialLoadedChart?: any, viewMode: 'grid' | 'single', onViewModeChange: (mode: 'grid' | 'single') => void }) {
     const [data, setData] = useState({
         salaryByIndustry: [],
         jobsByExperience: [],
@@ -88,7 +88,6 @@ export default function AnalyticsCharts({ initialLoadedChart }: { initialLoadedC
     const [searchQuery, setSearchQuery] = useState("");
     const [activeId, setActiveId] = useState<string | null>(null);
 
-    const [viewMode, setViewMode] = useState<'grid' | 'single'>('single');
     const [focusedChartId, setFocusedChartId] = useState<string>('timeSeries');
     
     const [floatingWindows, setFloatingWindows] = useState<any[]>([]);
@@ -107,7 +106,7 @@ export default function AnalyticsCharts({ initialLoadedChart }: { initialLoadedC
     useEffect(() => {
         if (initialLoadedChart) {
             setLoadedSavedChart(initialLoadedChart);
-            setViewMode('single');
+            onViewModeChange('single');
             setFocusedChartId(initialLoadedChart.id);
             
             // Apply its saved display mode if present
@@ -522,7 +521,7 @@ export default function AnalyticsCharts({ initialLoadedChart }: { initialLoadedC
         <div className="space-y-6">
             
             {/* Natural Language to SQL/Charts Search Box */}
-            <div id="ai-assistant" className="bg-card text-card-foreground p-6 rounded-xl shadow-sm border border-border mb-8 transition-colors">
+            <div id="ai-assistant-input" className="bg-card text-card-foreground p-6 rounded-xl shadow-sm border border-border mb-8 transition-colors">
                 <div className="mb-3 flex items-center gap-2">
                     <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -561,20 +560,20 @@ export default function AnalyticsCharts({ initialLoadedChart }: { initialLoadedC
                 </form>
             </div>
 
-            <div id="standard-analytics" className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
+            <div id="standard-analytics-charts" className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
                 <h2 className="text-xl font-bold text-foreground">Standard Analytics</h2>
                 
                 <div className="flex items-center gap-4">
                     {/* View Mode Toggles */}
                     <div className="flex bg-secondary p-1 rounded-lg">
                         <button 
-                            onClick={() => setViewMode('single')}
+                            onClick={() => onViewModeChange('single')}
                             className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${viewMode === 'single' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                         >
                             Focus View
                         </button>
                         <button 
-                            onClick={() => setViewMode('grid')}
+                            onClick={() => onViewModeChange('grid')}
                             className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${viewMode === 'grid' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                         >
                             Grid View

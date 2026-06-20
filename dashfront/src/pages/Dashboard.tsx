@@ -1,19 +1,20 @@
 import { useEffect, useState, useMemo } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { fetchJobLocations, fetchSkillCoOccurrence, fetchSkillCoOccurrenceTrends } from "../api/jobApi";
 import AnalyticsCharts from "../components/AnalyticsCharts";
 import { SavedInsights, type SavedChart } from "../components/SavedInsights";
 import { useAuth } from "../contexts/AuthContext";
+import { useTutorial } from "../contexts/TutorialContext";
 import { RoleSwitcher } from "../components/RoleSwitcher";
 import MapChart, { type MapViewState } from "../components/MapChart";
 import KeyIndicators from "../components/KeyIndicators";
 import { NetworkCard } from "../components/NetworkCard";
-import { Tutorial, type TutorialStep } from "../components/Tutorial";
 import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
 import type { NodeObject } from 'force-graph';
 import type { DateRange } from "react-day-picker";
+import type { Step } from 'react-joyride';
 
 // --- MapCard Component ---
 function MapCard({ isMaximized = false, onMaximizeToggle, locationData, viewState, onViewChange, isActive, onActiveChange }: any) {
@@ -39,6 +40,8 @@ function MapCard({ isMaximized = false, onMaximizeToggle, locationData, viewStat
 // --- Dashboard ---
 export default function Dashboard() {
     const location = useLocation();
+    const navigate = useNavigate();
+    const { startTutorial } = useTutorial();
     const { role } = useAuth();
     const [locations, setLocations] = useState<Record<string, number>>({});
     const [error, setError] = useState<string | null>(null);
@@ -51,103 +54,52 @@ export default function Dashboard() {
     const [highlightedNode, setHighlightedNode] = useState<NodeObject | null>(null);
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [isTrendMode, setTrendMode] = useState(false);
-    const [showTutorial, setShowTutorial] = useState(false);
     const [viewMode, setViewMode] = useState<'grid' | 'single'>('single');
 
-    const tutorialSteps: TutorialStep[] = useMemo(() => {
-        const baseSteps: TutorialStep[] = [
-            {
-                elementId: 'kpi-indicators',
-                title: 'Key Performance Indicators',
-                content: 'These cards show a high-level overview of the job market, including the total number of jobs and the fastest-growing skills.',
-                position: 'bottom',
-            },
-            {
-                elementId: 'ai-assistant-input',
-                title: 'Ask Your Data (AI Assistant)',
-                content: 'Use natural language to ask complex questions about the data. The AI will generate a custom chart to answer your query.',
-                position: 'bottom',
-            },
-            {
-                elementId: 'standard-analytics-charts',
-                title: 'Standard Analytics',
-                content: 'This section provides detailed, interactive charts on various market aspects. You can switch between a focused view and a grid view.',
-                position: 'left',
-            }
-        ];
+    const tutorialSteps: Step[] = useMemo(() => [
+        {
+            target: '#kpi-indicators',
+            content: 'These cards show a high-level overview of the job market, including the total number of jobs and the fastest-growing skills.',
+            placement: 'bottom',
+        },
+        {
+            target: '#ai-assistant-input',
+            content: 'Use natural language to ask complex questions about the data. The AI will generate a custom chart to answer your query.',
+            placement: 'bottom',
+        },
+        {
+            target: '#standard-analytics-charts',
+            content: 'This section provides detailed, interactive charts on various market aspects. You can switch between a focused view and a grid view.',
+            placement: 'top',
+        },
+        {
+            target: '#network-card',
+            content: 'This graph visualizes the relationships between skills. Click the title to switch to "Trend-Detection Mode" and see which skill connections are growing or fading.',
+            placement: 'left',
+        },
+        {
+            target: '#map-card',
+            content: 'This map shows where jobs are located. Clusters represent the total number of jobs in that area. Click to zoom in.',
+            placement: 'right',
+        },
+        {
+            target: '#jobs-page-link',
+            content: 'Now, let\'s explore the jobs table to see the raw data.',
+            placement: 'bottom',
+        },
+    ], [viewMode]);
 
-        if (viewMode === 'grid') {
-            baseSteps.push(
-                {
-                    elementId: 'tutorial-drag-handle',
-                    title: 'Reorder Charts',
-                    content: 'Click and drag this handle to reorder the charts in the grid view to your preference.',
-                    position: 'left',
-                },
-                {
-                    elementId: 'tutorial-toggle-type',
-                    title: 'Change Display Type',
-                    content: 'For charts that support it, click this button to toggle between different visualizations, like a pie chart and a bar chart.',
-                    position: 'left',
-                },
-                {
-                    elementId: 'tutorial-popout-chart',
-                    title: 'Pop-out Window',
-                    content: 'Click here to open any chart in a separate, floating window for easy comparison.',
-                    position: 'left',
-                },
-                {
-                    elementId: 'tutorial-save-chart',
-                    title: 'Save Insight',
-                    content: 'Save any chart configuration, including AI-generated ones, to your personal collection.',
-                    position: 'left',
-                },
-                {
-                    elementId: 'sidebar-saved-insights',
-                    title: 'Your Saved Insights',
-                    content: 'All your saved charts and queries will appear here in the sidebar, organized by category for easy access later.',
-                    position: 'right',
-                }
-            );
-        } else {
-             baseSteps.push({
-                elementId: 'standard-analytics-charts',
-                title: 'Interactive Features',
-                content: 'Switch to "Grid View" to see interactive features like dragging to reorder, changing chart types, and saving insights.',
-                position: 'left',
-            });
-        }
+    const handleTutorialStart = () => {
+        startTutorial(tutorialSteps);
+    };
 
-        baseSteps.push(
-            {
-                elementId: 'network-card',
-                title: 'Skill Co-occurrence Network',
-                content: 'This graph visualizes the relationships between skills. Click the title to switch to "Trend-Detection Mode" and see which skill connections are growing or fading.',
-                position: 'left',
-            },
-            {
-                elementId: 'map-card',
-                title: 'Geospatial Distribution',
-                content: 'This map shows where jobs are located. Clusters represent the total number of jobs in that area. Click to zoom in.',
-                position: 'right',
-            }
-        );
-
-        return baseSteps;
-    }, [viewMode]);
-
-    // Auto-start tutorial for new users
     useEffect(() => {
         const params = new URLSearchParams(location.search);
-        const isNewUser = params.get('new_user') === 'true';
-        const hasSeenTutorial = localStorage.getItem('hasSeenTutorial');
-
-        if (isNewUser && !hasSeenTutorial) {
-            setViewMode('grid');
-            setTimeout(() => setShowTutorial(true), 500);
-            localStorage.setItem('hasSeenTutorial', 'true');
+        if (params.get('tutorial') === 'true') {
+            navigate(location.pathname, { replace: true }); // Clean URL
+            handleTutorialStart();
         }
-    }, [location.search]);
+    }, [location, navigate, startTutorial]);
 
     const { data: coOccurrenceData, isFetching: isGraphFetching } = useQuery({
         queryKey: ["skillCoOccurrence", dateRange, isTrendMode],
@@ -200,13 +152,13 @@ export default function Dashboard() {
             <button onClick={() => setShowSavedInsights(prev => !prev)} className={`absolute top-1/2 -translate-y-1/2 z-30 w-6 h-16 bg-card border-y border-r border-border rounded-r-lg flex items-center justify-center transition-all duration-300 hover:bg-secondary group ${showSavedInsights ? "left-72" : "left-0"}`}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`text-muted-foreground group-hover:text-foreground transition-transform ${showSavedInsights ? "" : "rotate-180"}`}><path d="m15 18-6-6 6-6" /></svg>
             </button>
-            <aside id="sidebar-saved-insights" className={`absolute left-0 top-0 bottom-0 w-72 bg-card border-r border-border overflow-y-auto z-20 transition-transform duration-300 hidden lg:block ${showSavedInsights ? "translate-x-0" : "-translate-x-full"}`}>
+            <aside className={`absolute left-0 top-0 bottom-0 w-72 bg-card border-r border-border overflow-y-auto z-20 transition-transform duration-300 hidden lg:block ${showSavedInsights ? "translate-x-0" : "-translate-x-full"}`}>
                 <SavedInsights onLoadInsight={setLoadedSavedChart} />
             </aside>
             <main className={`flex-1 overflow-y-auto p-4 md:p-8 transition-all duration-300 ${showSavedInsights ? "lg:ml-72" : "ml-0"}`}>
                 <div className="max-w-6xl mx-auto pb-20">
                     <div id="kpi-indicators"><KeyIndicators /></div>
-                    <div id="standard-analytics-charts" className="w-full mb-8">
+                    <div className="w-full mb-8">
                         <AnalyticsCharts 
                             initialLoadedChart={loadedSavedChart} 
                             viewMode={viewMode}
@@ -228,10 +180,9 @@ export default function Dashboard() {
                     </div>
                 </>
             )}
-            <Button onClick={() => setShowTutorial(true)} variant="outline" size="icon" className="fixed bottom-4 right-4 z-50 rounded-full h-12 w-12 shadow-lg">
+            <Button onClick={handleTutorialStart} variant="outline" size="icon" className="fixed bottom-4 right-4 z-50 rounded-full h-12 w-12 shadow-lg">
                 <HelpCircle className="h-6 w-6" />
             </Button>
-            {showTutorial && <Tutorial steps={tutorialSteps} onClose={() => setShowTutorial(false)} />}
         </div>
     );
 }

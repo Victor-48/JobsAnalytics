@@ -7,12 +7,59 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { TutorialProvider } from "./contexts/TutorialContext";
+import {Joyride, EventData } from 'react-joyride';
+import { useTutorial } from './contexts/TutorialContext';
+
+function AppContent() {
+    const { run, steps, stepIndex, stopTutorial, nextStep, prevStep } = useTutorial();
+
+    return (
+        <>
+            <Navigation />
+            <div className="min-h-[calc(100vh-73px)] bg-background transition-colors duration-300">
+                <Routes>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/jobs" element={<Jobs />} />
+                    <Route path="/add-job" element={<AddJob />} />
+                    <Route path="/edit-job/:id" element={<AddJob />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                </Routes>
+            </div>
+            <Joyride
+                run={run}
+                steps={steps}
+                stepIndex={stepIndex}
+                continuous
+                onEvent={(data: EventData) => {
+                    const { action, status, type } = data;
+                    if (['finished', 'skipped'].includes(status as string)) {
+                        stopTutorial();
+                    } else if (['next', 'prev'].includes(action)) {
+                        if (type === 'step:after') {
+                            action === 'next' ? nextStep() : prevStep();
+                        }
+                    }
+                }}
+                options={{
+                    arrowColor: 'hsl(var(--card))',
+                    backgroundColor: 'hsl(var(--card))',
+                    primaryColor: 'hsl(var(--primary))',
+                    textColor: 'hsl(var(--foreground))',
+                    zIndex: 1000,
+                    showProgress: true,
+                    buttons: ['back', 'close', 'primary', 'skip'],
+                }}
+            />
+        </>
+    );
+}
 
 function Navigation() {
     const location = useLocation();
     const { role, logout } = useAuth();
-    
-    // Don't show nav on auth pages
+
     if (location.pathname === '/login' || location.pathname === '/register') {
         return (
             <div className="absolute top-4 right-4 z-50">
@@ -24,10 +71,10 @@ function Navigation() {
     return (
         <nav className="p-4 bg-card border-b border-border flex justify-between items-center transition-colors z-50 relative">
             <div className="flex gap-6 items-center">
-                <Link to="/" className="font-bold text-foreground hover:text-primary transition-colors">Dashboard</Link>
+                <Link id="dashboard-page-link" to="/" className="font-bold text-foreground hover:text-primary transition-colors">Dashboard</Link>
                 {role !== 'GUEST' && (
                     <>
-                        <Link to="/jobs" className="font-bold text-foreground hover:text-primary transition-colors">Jobs</Link>
+                        <Link id="jobs-page-link" to="/jobs" className="font-bold text-foreground hover:text-primary transition-colors">Jobs</Link>
                         <Link to="/add-job" className="font-bold text-primary hover:opacity-80 transition-opacity">Add New Job</Link>
                     </>
                 )}
@@ -45,7 +92,6 @@ function Navigation() {
 }
 
 export default function App() {
-    // Apply theme on initial load to prevent flash
     useEffect(() => {
         const storedTheme = localStorage.getItem("theme");
         if (storedTheme === "dark") {
@@ -55,19 +101,11 @@ export default function App() {
 
     return (
         <AuthProvider>
-            <Router>
-                <Navigation />
-                <div className="min-h-[calc(100vh-73px)] bg-background transition-colors duration-300">
-                    <Routes>
-                        <Route path="/" element={<Dashboard />} />
-                        <Route path="/jobs" element={<Jobs />} />
-                        <Route path="/add-job" element={<AddJob />} />
-                        <Route path="/edit-job/:id" element={<AddJob />} />
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/register" element={<Register />} />
-                    </Routes>
-                </div>
-            </Router>
+            <TutorialProvider>
+                <Router>
+                    <AppContent />
+                </Router>
+            </TutorialProvider>
         </AuthProvider>
     );
 }

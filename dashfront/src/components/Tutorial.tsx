@@ -32,7 +32,7 @@ export const Tutorial = ({ steps, onClose }: TutorialProps) => {
 
         if (element) {
             element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-            
+
             // Initial position after a short delay to allow smooth scrolling to start
             setTimeout(updatePosition, 100);
         }
@@ -78,7 +78,7 @@ export const Tutorial = ({ steps, onClose }: TutorialProps) => {
     const getPopupStyle = (): React.CSSProperties => {
         if (!elementRect) return { display: 'none' };
         const position = currentStep.position || 'bottom';
-        
+
         const baseStyle: React.CSSProperties = {
             position: 'fixed',
             zIndex: 101,
@@ -101,14 +101,14 @@ export const Tutorial = ({ steps, onClose }: TutorialProps) => {
     return (
         <div className="fixed inset-0 z-[100] pointer-events-none">
             <div style={getHighlightStyle()} />
-            
-            <div 
+
+            <div
                 className="bg-card p-4 rounded-lg shadow-2xl w-80"
                 style={getPopupStyle()}
             >
                 <h3 className="font-bold text-lg mb-2">{currentStep.title}</h3>
                 <p className="text-sm text-muted-foreground mb-4">{currentStep.content}</p>
-                
+
                 <div className="flex justify-between items-center">
                     <span className="text-xs text-muted-foreground">
                         Step {currentStepIndex + 1} of {steps.length}
