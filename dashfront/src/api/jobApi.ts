@@ -32,6 +32,7 @@ export interface GraphLink {
     source: string;
     target: string;
     value: number;
+    growth?: number; // Optional growth percentage for trend mode
 }
 
 export interface GraphData {
@@ -81,6 +82,14 @@ export async function fetchSkillCoOccurrence(startDate?: string, endDate?: strin
     if (endDate) params.endDate = endDate;
 
     const response: AxiosResponse<GraphData> = await api.get("/languages/co-occurrence", { params });
+    return response.data;
+}
+
+export async function fetchSkillCoOccurrenceTrends(referenceDate?: string): Promise<GraphData> {
+    const params: Record<string, string> = {};
+    if (referenceDate) params.referenceDate = referenceDate;
+
+    const response: AxiosResponse<GraphData> = await api.get("/languages/co-occurrence-trends", { params });
     return response.data;
 }
 

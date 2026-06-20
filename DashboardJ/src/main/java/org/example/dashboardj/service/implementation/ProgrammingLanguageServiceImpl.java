@@ -1,11 +1,7 @@
 package org.example.dashboardj.service.implementation;
 
 import lombok.RequiredArgsConstructor;
-import org.example.dashboardj.dto.GraphDataDTO;
-import org.example.dashboardj.dto.GraphLinkDTO;
-import org.example.dashboardj.dto.GraphNodeDTO;
-import org.example.dashboardj.dto.ProgrammingLanguageDTO;
-import org.example.dashboardj.dto.SkillJobCountDTO;
+import org.example.dashboardj.dto.*;
 import org.example.dashboardj.entity.ProgrammingLanguage;
 import org.example.dashboardj.repository.ProgrammingLanguageRepository;
 import org.example.dashboardj.service.ProgrammingLanguageService;
@@ -129,6 +125,50 @@ public class ProgrammingLanguageServiceImpl implements ProgrammingLanguageServic
                 nodeIds.add(target);
             }
         }
+
+        if (nodeIds.isEmpty()) {
+            return new GraphDataDTO(new ArrayList<>(), new ArrayList<>());
+        }
+
+        List<SkillJobCountDTO> jobCounts = repository.findJobCountsByNames(nodeIds);
+        Map<String, Integer> jobCountMap = jobCounts.stream()
+            .collect(Collectors.toMap(
+                SkillJobCountDTO::getName,
+                SkillJobCountDTO::getJobCount,
+                (existing, replacement) -> existing
+            ));
+
+        List<GraphNodeDTO> nodes = nodeIds.stream()
+            .map(id -> {
+                int jobCount = jobCountMap.getOrDefault(id, 1);
+                return new GraphNodeDTO(id, jobCount, "default");
+            })
+            .collect(Collectors.toList());
+
+        return new GraphDataDTO(nodes, links);
+    }
+
+    @Override
+    public GraphDataDTO getSkillCoOccurrenceTrendsGraph(LocalDate referenceDate) {
+        LocalDate currentPeriodEnd = referenceDate;
+        LocalDate currentPeriodStart = referenceDate.minusDays(90);
+        LocalDate previousPeriodStart = referenceDate.minusDays(180);
+
+        List<GraphLinkTrendDTO> trendLinks = repository.findCoOccurrenceTrends(
+            currentPeriodEnd, 
+            currentPeriodStart, 
+            previousPeriodStart
+        );
+        
+        List<GraphLinkDTO> links = trendLinks.stream()
+            .map(trend -> new GraphLinkDTO(trend.getSource(), trend.getTarget(), trend.getValue(), trend.getGrowth()))
+            .collect(Collectors.toList());
+
+        Set<String> nodeIds = new HashSet<>();
+        links.forEach(link -> {
+            nodeIds.add(link.getSource());
+            nodeIds.add(link.getTarget());
+        });
 
         if (nodeIds.isEmpty()) {
             return new GraphDataDTO(new ArrayList<>(), new ArrayList<>());

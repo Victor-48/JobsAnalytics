@@ -63,4 +63,12 @@ public class ProgrammingLanguageController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return ResponseEntity.ok(service.getSkillCoOccurrenceGraph(startDate, endDate));
     }
+
+    @GetMapping("/co-occurrence-trends")
+    public ResponseEntity<GraphDataDTO> getSkillCoOccurrenceTrendsGraph(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate referenceDate) {
+        // Use today's date if no reference date is provided
+        LocalDate refDate = referenceDate != null ? referenceDate : LocalDate.now();
+        return ResponseEntity.ok(service.getSkillCoOccurrenceTrendsGraph(refDate));
+    }
 }

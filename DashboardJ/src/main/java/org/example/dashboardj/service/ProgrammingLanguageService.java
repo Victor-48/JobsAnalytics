@@ -23,4 +23,6 @@ public interface ProgrammingLanguageService {
     List<ProgrammingLanguageDTO> searchLanguages(String name);
 
     GraphDataDTO getSkillCoOccurrenceGraph(LocalDate startDate, LocalDate endDate);
+
+    GraphDataDTO getSkillCoOccurrenceTrendsGraph(LocalDate referenceDate);
 }

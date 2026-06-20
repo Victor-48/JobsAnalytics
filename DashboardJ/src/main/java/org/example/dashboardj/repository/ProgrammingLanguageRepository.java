@@ -1,5 +1,6 @@
 package org.example.dashboardj.repository;
 
+import org.example.dashboardj.dto.GraphLinkTrendDTO;
 import org.example.dashboardj.dto.SkillGrowthDTO;
 import org.example.dashboardj.dto.SkillJobCountDTO;
 import org.example.dashboardj.entity.ProgrammingLanguage;
@@ -42,6 +43,22 @@ public interface ProgrammingLanguageRepository extends Neo4jRepository<Programmi
            "RETURN l.name as skillName, growth as growthPercentage " +
            "ORDER BY growth DESC LIMIT 1")
     Optional<SkillGrowthDTO> findFastestGrowingSkill(
+        @Param("currentPeriodEnd") LocalDate currentPeriodEnd,
+        @Param("currentPeriodStart") LocalDate currentPeriodStart,
+        @Param("previousPeriodStart") LocalDate previousPeriodStart
+    );
+
+    @Query("MATCH (l1:ProgrammingLanguage)<-[:REQUIRES]-(j:JobPosting)-[:REQUIRES]->(l2:ProgrammingLanguage) " +
+           "WHERE l1.name < l2.name AND j.postedDate >= $previousPeriodStart AND j.postedDate < $currentPeriodEnd " +
+           "WITH l1, l2, " +
+           "     sum(CASE WHEN j.postedDate >= $currentPeriodStart THEN 1 ELSE 0 END) as currentCount, " +
+           "     sum(CASE WHEN j.postedDate < $currentPeriodStart THEN 1 ELSE 0 END) as previousCount " +
+           "WHERE currentCount > 0 AND previousCount > 0 " +
+           "WITH l1, l2, currentCount, " +
+           "     (toFloat(currentCount - previousCount) / previousCount) * 100.0 as growth " +
+           "RETURN l1.name as source, l2.name as target, currentCount as value, growth as growth " +
+           "ORDER BY growth DESC, value DESC LIMIT 50")
+    List<GraphLinkTrendDTO> findCoOccurrenceTrends(
         @Param("currentPeriodEnd") LocalDate currentPeriodEnd,
         @Param("currentPeriodStart") LocalDate currentPeriodStart,
         @Param("previousPeriodStart") LocalDate previousPeriodStart
