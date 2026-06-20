@@ -41,7 +41,7 @@ export default function Register() {
     try {
         const response = await registerApi(data);
         login(response.token, response.role as any);
-        navigate('/');
+        navigate('/?new_user=true');
     } catch (err: any) {
         setErrorMsg(err.response?.data?.error || "An error occurred during registration.");
     }
@@ -70,7 +70,7 @@ export default function Register() {
                 <FormItem>
                   <FormLabel>Full Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="John Doe" {...field} />
+                    <Input placeholder="Bober Wood" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -33,27 +33,28 @@ export function SortableChartCard({ chart, children, onToggleType, displayType, 
                 <h3 className="font-bold m-0 text-lg tracking-tight">{chart.title}</h3>
                 <div className="flex items-center gap-3">
                     {onSave && (
-                        <button onClick={onSave} className="p-1.5 text-muted-foreground hover:text-green-600 hover:bg-green-50 rounded-md transition-colors" title="Save this insight">
+                        <button id="tutorial-save-chart" onClick={onSave} className="p-1.5 text-muted-foreground hover:text-green-600 hover:bg-green-50 rounded-md transition-colors" title="Save this insight">
                             <SaveIcon />
                         </button>
                     )}
                     {onToggleFloat && (
-                         <button onClick={onToggleFloat} className={`p-1.5 rounded-md transition-colors ${isFloating ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-secondary'}`} title="Pop out chart">
+                         <button id="tutorial-popout-chart" onClick={onToggleFloat} className={`p-1.5 rounded-md transition-colors ${isFloating ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-secondary'}`} title="Pop out chart">
                             <FloatIcon />
                         </button>
                     )}
                     {onToggleUnit && (
-                        <button onClick={onToggleUnit} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-secondary rounded-md transition-colors" title={`Switch to ${displayUnit === 'absolute' ? 'percentage' : 'absolute values'}`}>
+                        <button id="tutorial-toggle-unit" onClick={onToggleUnit} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-secondary rounded-md transition-colors" title={`Switch to ${displayUnit === 'absolute' ? 'percentage' : 'absolute values'}`}>
                             {displayUnit === 'absolute' ? <PercentageIcon /> : <HashIcon />}
                         </button>
                     )}
                     {onToggleType && (
-                        <div className="flex items-center bg-secondary rounded-md p-0.5">
+                        <div id="tutorial-toggle-type" className="flex items-center bg-secondary rounded-md p-0.5">
                             <span className="text-xs text-muted-foreground px-2 font-medium capitalize hidden sm:inline-block">{displayType}</span>
                             <button onClick={onToggleType} className="p-1 text-muted-foreground bg-background shadow-sm hover:text-primary rounded transition-colors" title="Switch Chart Type"><SwitchIcon /></button>
                         </div>
                     )}
                     <button 
+                        id="tutorial-drag-handle"
                         {...attributes} 
                         {...listeners} 
                         className={`p-1.5 rounded-md transition-colors touch-none ${isOverlay ? 'text-primary bg-primary/10 cursor-grabbing' : 'text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing hover:bg-secondary'}`}

@@ -522,7 +522,7 @@ export default function AnalyticsCharts({ initialLoadedChart }: { initialLoadedC
         <div className="space-y-6">
             
             {/* Natural Language to SQL/Charts Search Box */}
-            <div className="bg-card text-card-foreground p-6 rounded-xl shadow-sm border border-border mb-8 transition-colors">
+            <div id="ai-assistant" className="bg-card text-card-foreground p-6 rounded-xl shadow-sm border border-border mb-8 transition-colors">
                 <div className="mb-3 flex items-center gap-2">
                     <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -538,6 +538,7 @@ export default function AnalyticsCharts({ initialLoadedChart }: { initialLoadedC
                     <div className="relative w-full">
                         <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                         <input
+                            id="ask-your-data-input"
                             type="text"
                             placeholder="e.g., 'Arată-mi evoluția joburilor în IT din Cluj pe ultimii 3 ani sub formă de linie'"
                             value={llmQuery}
@@ -560,7 +561,7 @@ export default function AnalyticsCharts({ initialLoadedChart }: { initialLoadedC
                 </form>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
+            <div id="standard-analytics" className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
                 <h2 className="text-xl font-bold text-foreground">Standard Analytics</h2>
                 
                 <div className="flex items-center gap-4">
