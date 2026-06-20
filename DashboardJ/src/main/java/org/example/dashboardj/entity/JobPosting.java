@@ -37,6 +37,5 @@ public class JobPosting {
     private String employmentType;
     private Integer satisfactionScore;
 
-    @Relationship(type = "REQUIRES", direction = Relationship.Direction.OUTGOING)
     private List<ProgrammingLanguage> requiredLanguages;
 }

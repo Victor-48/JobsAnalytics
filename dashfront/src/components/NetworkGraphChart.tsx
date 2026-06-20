@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, memo, useMemo } from 'react';
 import ForceGraph2D, { ForceGraphMethods, NodeObject, LinkObject } from 'react-force-graph-2d';
 import DOMPurify from 'dompurify';
 import type { GraphData } from '../api/jobApi';
+import { useTheme } from '../hooks/useTheme';
 
 interface NetworkGraphChartProps {
     data: GraphData;
@@ -12,9 +13,7 @@ interface NetworkGraphChartProps {
 }
 
 // --- Robust Color Converter ---
-// Converts any valid CSS color string to an RGBA string with a given alpha.
 const toRgba = (color: string, alpha: number): string => {
-    // This is a robust way to get the RGB values of any CSS color.
     const tempDiv = document.createElement('div');
     tempDiv.style.color = color;
     document.body.appendChild(tempDiv);
@@ -33,6 +32,7 @@ const MemoizedNetworkGraphChart = ({ data, highlightedNode, onNodeClick, onBackg
     const containerRef = useRef<HTMLDivElement>(null);
     const fgRef = useRef<ForceGraphMethods>();
     const [dimensions, setDimensions] = useState({ width: 0, height: 400 });
+    const theme = useTheme(); // Use the theme hook
 
     const sanitizedData = useMemo(() => ({
         nodes: data.nodes.map(node => ({
@@ -78,15 +78,20 @@ const MemoizedNetworkGraphChart = ({ data, highlightedNode, onNodeClick, onBackg
         return () => window.removeEventListener('resize', updateDimensions);
     }, []);
 
+    // Memoize colors to re-calculate only when the theme changes
+    const { nodeColor, linkColor, textColor, bgColor } = useMemo(() => {
+        const getCssVar = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        return {
+            nodeColor: `hsl(${getCssVar('--primary')})`,
+            linkColor: `hsl(${getCssVar('--border')})`,
+            textColor: `hsl(${getCssVar('--foreground')})`,
+            bgColor: `hsl(${getCssVar('--card')})`,
+        };
+    }, [theme]);
+
     if (!data || data.nodes.length === 0) {
         return <div className="h-[400px] flex items-center justify-center bg-muted/20 rounded-xl border border-dashed border-border text-muted-foreground">Not enough data to render the network graph.</div>;
     }
-
-    const getCssVar = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-    const nodeColor = `hsl(${getCssVar('--primary')})`;
-    const linkColor = `hsl(${getCssVar('--border')})`;
-    const textColor = `hsl(${getCssVar('--foreground')})`;
-    const bgColor = `hsl(${getCssVar('--card')})`;
 
     const getNodeColor = (node: NodeObject) => {
         const isHighlighted = !highlightedNode || highlightedNodes.has(node.id as string);

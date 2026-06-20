@@ -18,11 +18,16 @@ import java.util.Map;
 public interface JobPostingRepository extends Neo4jRepository<JobPosting, String> { 
 
     Page<JobPosting> findByTitleContainingIgnoreCase(String title, Pageable pageable);
-    
+
     List<JobPosting> findByTitleContainingIgnoreCase(String title);
 
     List<JobPosting> findByCompanyContainingIgnoreCase(String company);
-    
+
+    @Query("MATCH (j:JobPosting) " +
+           "OPTIONAL MATCH (j)-[r:REQUIRES]->(l:ProgrammingLanguage) " +
+           "RETURN j, collect(r), collect(l)")
+    List<JobPosting> findAllWithLanguages();
+
     @Query("MATCH (j:JobPosting) WHERE toLower(j.industry) CONTAINS toLower($industry) RETURN j")
     List<JobPosting> findJobsByIndustrySafe(@Param("industry") String industry);
 
@@ -58,7 +63,7 @@ public interface JobPostingRepository extends Neo4jRepository<JobPosting, String
 
     @Query("MATCH (j:JobPosting) " +
            "WHERE j.postedDate IS NOT NULL " +
-           "RETURN j.postedDate as name, count(j) as count")
+           "RETURN toString(j.postedDate) as name, count(j) as count")
     List<CountResultDTO> getJobPostingsOverTime();
 
     @Query("MATCH (j:JobPosting) " +
@@ -75,26 +80,4 @@ public interface JobPostingRepository extends Neo4jRepository<JobPosting, String
            "RETURN j.title as name, count(j) as count " +
            "ORDER BY count DESC")
     List<CountResultDTO> findJobTitlesBySkills(@Param("skill1") String skill1, @Param("skill2") String skill2);
-
-    @Query("""
-    MATCH (j:JobPosting)
-    OPTIONAL MATCH (j)-[:REQUIRES]->(l:ProgrammingLanguage)
-    WITH j, collect(l.name) AS rawLanguages
-    WITH j,
-         [x IN rawLanguages WHERE x IS NOT NULL] AS languages
-    RETURN j.id as id,
-           j.title as title,
-           j.company as company,
-           j.location as location,
-           toString(j.postedDate) as postedDate,
-           j.salary as salary,
-           j.currency as currency,
-           j.experienceLevel as experienceLevel,
-           j.industry as industry,
-           j.naceCode as naceCode,
-           j.remoteFlexibility as remoteFlexibility,
-           j.employmentType as employmentType,
-           languages as requiredLanguages
-    """)
-    List<JobPostingDTO> findAllJobSummaries();
 }

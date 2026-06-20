@@ -25,7 +25,7 @@ export default function TimeSeriesChart() {
     if (data.length === 0) return null;
 
     return (
-        <div className="w-full h-full flex flex-col relative">
+        <div className="w-full h-full aspect-video">
             <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={data} margin={{ top: 20, right: 10, left: 10, bottom: 20 }}>
                     <defs>

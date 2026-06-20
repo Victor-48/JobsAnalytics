@@ -145,13 +145,15 @@ export default function MapChart({ locationData, viewState, onViewChange, isActi
     }
 
     const createClusterCustomIcon = (cluster: any) => {
-        const count = cluster.getChildCount();
+        const markers = cluster.getAllChildMarkers();
+        const totalJobs = markers.reduce((sum: number, marker: any) => sum + marker.options.count, 0);
+
         let size = 'small';
-        if (count > 10) size = 'medium';
-        if (count > 100) size = 'large';
+        if (totalJobs > 100) size = 'medium';
+        if (totalJobs > 1000) size = 'large';
 
         return L.divIcon({
-            html: `<div class="flex items-center justify-center w-full h-full bg-primary/80 text-primary-foreground font-bold rounded-full border-2 border-primary shadow-sm"><span>${count}</span></div>`,
+            html: `<div class="flex items-center justify-center w-full h-full bg-primary/80 text-primary-foreground font-bold rounded-full border-2 border-primary shadow-sm"><span>${totalJobs}</span></div>`,
             className: `marker-cluster marker-cluster-${size} bg-transparent`,
             iconSize: L.point(40, 40, true),
         });
@@ -204,6 +206,8 @@ export default function MapChart({ locationData, viewState, onViewChange, isActi
                             weight={2}
                             opacity={0.8}
                             fillOpacity={0.6}
+                            // Pass the count to the marker options
+                            count={marker.count}
                         >
                             <Tooltip>
                                 <div className="text-center">
