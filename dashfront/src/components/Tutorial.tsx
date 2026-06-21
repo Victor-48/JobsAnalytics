@@ -71,7 +71,7 @@ export const Tutorial = ({ steps, onClose }: TutorialProps) => {
             boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.7)',
             borderRadius: '8px',
             transition: 'all 0.1s ease-out',
-            pointerEvents: 'none', // Allows scrolling "through" the overlay
+            pointerEvents: 'none',
         };
     };
 

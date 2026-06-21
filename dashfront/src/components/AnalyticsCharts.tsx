@@ -55,13 +55,13 @@ const initialCharts = [
 ];
 
 const dropAnimationConfig = {
-  sideEffects: defaultDropAnimationSideEffects({
-    styles: {
-      active: {
-        opacity: '0.4',
-      },
-    },
-  }),
+    sideEffects: defaultDropAnimationSideEffects({
+        styles: {
+            active: {
+                opacity: '0.4',
+            },
+        },
+    }),
 };
 
 export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewModeChange }: { initialLoadedChart?: any, viewMode: 'grid' | 'single', onViewModeChange: (mode: 'grid' | 'single') => void }) {
@@ -71,7 +71,7 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
         remoteVsOnsite: [],
         employmentType: [],
     });
-    
+
     const [drillDownIndustry, setDrillDownIndustry] = useState<{code: string, name: string} | null>(null);
     const [drillDownData, setDrillDownData] = useState<any[]>([]);
     const [isDrillDownLoading, setIsDrillDownLoading] = useState(false);
@@ -89,7 +89,7 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
     const [activeId, setActiveId] = useState<string | null>(null);
 
     const [focusedChartId, setFocusedChartId] = useState<string>('timeSeries');
-    
+
     const [floatingWindows, setFloatingWindows] = useState<any[]>([]);
     const { ref: scrollRef, events: scrollEvents } = useDragScroll<HTMLDivElement>();
 
@@ -108,7 +108,7 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
             setLoadedSavedChart(initialLoadedChart);
             onViewModeChange('single');
             setFocusedChartId(initialLoadedChart.id);
-            
+
             // Apply its saved display mode if present
             if (initialLoadedChart.displayType && chartDisplay[initialLoadedChart.id as keyof typeof chartDisplay] !== undefined) {
                 setChartDisplay((prev: any) => ({ ...prev, [initialLoadedChart.id]: initialLoadedChart.displayType }));
@@ -121,10 +121,10 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
             if(d) {
                 const formatted = Object.keys(d).map(key => {
                     const nace = NACE_SECTORS.find((n: any) => n.code === key);
-                    return { 
+                    return {
                         code: key,
-                        name: nace ? (nace.description.length > 20 ? nace.description.substring(0, 20) + '...' : nace.description) : key, 
-                        salary: Math.round(d[key]) 
+                        name: nace ? (nace.description.length > 20 ? nace.description.substring(0, 20) + '...' : nace.description) : key,
+                        salary: Math.round(d[key])
                     };
                 });
                 setData(prev => ({ ...prev, salaryByIndustry: formatted as any }));
@@ -172,7 +172,7 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
             setDrillDownIndustry({ code: entry.code, name: entry.name });
             setIsDrillDownLoading(true);
             try {
-                const fetchCode = entry.code; 
+                const fetchCode = entry.code;
                 const d = await fetchSubSectorsByNaceCode(fetchCode);
                 if (d) {
                     setDrillDownData(Object.keys(d).map(key => ({ name: key.length > 20 ? key.substring(0, 20) + '...' : key, count: d[key] })));
@@ -233,7 +233,7 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
         } else {
             chartToSave = activeCharts.find(c => c.id === chartId);
             if (!chartToSave) return;
-            
+
             // Determine the data payload and category based on standard chart ID
             if (chartId === 'timeSeries') {
                 // For MVP, we will show an alert that standard time series cannot be saved this way.
@@ -272,9 +272,9 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
         const existingStr = localStorage.getItem('savedInsights');
         const existing = existingStr ? JSON.parse(existingStr) : [];
         const newSavedList = [newSavedInsight, ...existing];
-        
+
         localStorage.setItem('savedInsights', JSON.stringify(newSavedList));
-        
+
         // Dispatch custom event to notify SavedInsights component in sidebar
         window.dispatchEvent(new Event('insightsUpdated'));
         alert(`Insight "${newSavedInsight.title}" saved successfully!`);
@@ -294,7 +294,7 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
             const isAI = chart.id === 'llmGenerated';
             return (
                 <div className="w-full h-full flex flex-col relative">
-                     <button 
+                    <button
                         onClick={() => {
                             if (isAI) {
                                 setLlmChartData(null);
@@ -308,11 +308,11 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
                         Close {isAI ? 'AI Chart' : 'Saved Chart'}
                     </button>
                     {chart.query && (
-                         <div className="absolute top-0 left-0 z-20 text-xs font-medium text-muted-foreground bg-background/80 px-2 py-1 rounded backdrop-blur-sm max-w-[70%] truncate">
+                        <div className="absolute top-0 left-0 z-20 text-xs font-medium text-muted-foreground bg-background/80 px-2 py-1 rounded backdrop-blur-sm max-w-[70%] truncate">
                             Query: <span className="text-foreground italic">"{chart.query}"</span>
                         </div>
                     )}
-                    
+
                     {/* Display the explanation if provided by the LLM */}
                     {chart.explanation && (
                         <div className="mt-8 mb-4 p-4 bg-secondary/30 rounded-lg text-sm text-foreground/80 border border-border">
@@ -331,7 +331,7 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
                                     <Bar dataKey="value" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} barSize={40} />
                                 </BarChart>
                             ) : chart.chartType === 'line' || chart.chartType === 'polyline' ? (
-                                 <LineChart data={chart.data} margin={{ top: 30, right: 10, left: 10, bottom: 20 }}>
+                                <LineChart data={chart.data} margin={{ top: 30, right: 10, left: 10, bottom: 20 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                                     <XAxis dataKey="name" tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dy={10} />
                                     <YAxis tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dx={-10} />
@@ -339,7 +339,7 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
                                     <Line type="monotone" dataKey="value" stroke="hsl(var(--chart-1))" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} activeDot={{r: 6}} />
                                 </LineChart>
                             ) : chart.chartType === 'pie' ? (
-                                 <PieChart margin={{ top: 30, right: 10, left: 10, bottom: 20 }}>
+                                <PieChart margin={{ top: 30, right: 10, left: 10, bottom: 20 }}>
                                     <Pie data={chart.data} cx="50%" cy="50%" labelLine label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`} outerRadius={100} fill="hsl(var(--chart-1))" dataKey="value">
                                         {chart.data.map((_: any, index: number) => <Cell key={`cell-${index}`} fill={getThemeColor(index)} />)}
                                     </Pie>
@@ -374,7 +374,7 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
                 return (
                     <div className="w-full h-full flex flex-col relative group pointer-events-auto">
                         {isDrillDown && (
-                            <button 
+                            <button
                                 onClick={() => setDrillDownIndustry(null)}
                                 className="absolute top-0 right-0 z-20 text-xs font-medium bg-secondary text-secondary-foreground px-3 py-1.5 rounded-full shadow-md transition-all flex items-center gap-1"
                             >
@@ -387,7 +387,7 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
                                 Sub-sectors for: <span className="text-foreground">{drillDownIndustry.name}</span>
                             </div>
                         )}
-                        
+
                         {isDrillDownLoading ? (
                             <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-10 backdrop-blur-[1px]">
                                 <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -399,13 +399,13 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                                 <XAxis dataKey="name" tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dy={10} />
                                 <YAxis tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dx={-10} />
-                                <Tooltip 
+                                <Tooltip
                                     formatter={(value: any) => [isDrillDown ? value : `$${value}`, isDrillDown ? 'Job Postings' : 'Avg Salary']}
-                                    contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)' }} 
+                                    contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)' }}
                                 />
-                                <Bar 
-                                    dataKey={dataKey} 
-                                    fill={isDrillDown ? "hsl(var(--chart-2))" : "hsl(var(--chart-1))"} 
+                                <Bar
+                                    dataKey={dataKey}
+                                    fill={isDrillDown ? "hsl(var(--chart-2))" : "hsl(var(--chart-1))"}
                                     radius={[4, 4, 0, 0]}
                                     onClick={!isDrillDown ? handleIndustryClick : undefined}
                                     cursor={!isDrillDown ? "pointer" : "default"}
@@ -422,7 +422,7 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                             <XAxis dataKey="name" tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dy={10} />
                             <YAxis tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dx={-10} />
-                            <Tooltip 
+                            <Tooltip
                                 formatter={(value: any) => [`$${value}`, 'Avg Salary']}
                                 contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                             />
@@ -433,23 +433,23 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
             case 'employmentType': {
                 const totalEmp = calculateTotal(data.employmentType, 'count');
                 const unitEmp = chartUnits.employmentType;
-                
+
                 return chartDisplay.employmentType === 'pie' ? (
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
-                            <Pie 
-                                data={data.employmentType} 
-                                cx="50%" cy="50%" 
+                            <Pie
+                                data={data.employmentType}
+                                cx="50%" cy="50%"
                                 innerRadius={60}
-                                outerRadius={90} 
-                                fill="hsl(var(--chart-1))" 
+                                outerRadius={90}
+                                fill="hsl(var(--chart-1))"
                                 dataKey="count"
                                 stroke="hsl(var(--background))"
                                 paddingAngle={2}
                             >
                                 {data.employmentType.map((_, index) => <Cell key={`cell-${index}`} fill={getThemeColor(index)} />)}
                             </Pie>
-                            <Tooltip 
+                            <Tooltip
                                 formatter={(value: any) => [formatValue(value, totalEmp, unitEmp), 'Jobs']}
                                 contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                             />
@@ -462,7 +462,7 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
                             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
                             <XAxis type="number" tickFormatter={(v) => formatValue(v, totalEmp, unitEmp).toString()} tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} />
                             <YAxis type="category" dataKey="name" width={80} tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} />
-                            <Tooltip 
+                            <Tooltip
                                 formatter={(value: any) => [formatValue(value, totalEmp, unitEmp), 'Jobs']}
                                 contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                             />
@@ -474,23 +474,23 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
             case 'jobsByExperience': {
                 const totalExp = calculateTotal(data.jobsByExperience, 'count');
                 const unitExp = chartUnits.jobsByExperience;
-                
+
                 return chartDisplay.jobsByExperience === 'pie' ? (
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
-                            <Pie 
-                                data={data.jobsByExperience} 
-                                cx="50%" cy="50%" 
+                            <Pie
+                                data={data.jobsByExperience}
+                                cx="50%" cy="50%"
                                 innerRadius={70}
-                                outerRadius={110} 
-                                fill="hsl(var(--chart-1))" 
+                                outerRadius={110}
+                                fill="hsl(var(--chart-1))"
                                 dataKey="count"
                                 stroke="hsl(var(--background))"
                                 paddingAngle={2}
                             >
                                 {data.jobsByExperience.map((_, index) => <Cell key={`cell-${index}`} fill={getThemeColor(index + 2)} />)}
                             </Pie>
-                            <Tooltip 
+                            <Tooltip
                                 formatter={(value: any) => [formatValue(value, totalExp, unitExp), 'Jobs']}
                                 contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                             />
@@ -503,7 +503,7 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                             <XAxis dataKey="name" tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dy={10} />
                             <YAxis tickFormatter={(v) => formatValue(v, totalExp, unitExp).toString()} tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dx={-10} />
-                            <Tooltip 
+                            <Tooltip
                                 formatter={(value: any) => [formatValue(value, totalExp, unitExp), 'Jobs']}
                                 contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                             />
@@ -519,7 +519,7 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
 
     return (
         <div className="space-y-6">
-            
+
             {/* Natural Language to SQL/Charts Search Box */}
             <div id="ai-assistant-input" className="bg-card text-card-foreground p-6 rounded-xl shadow-sm border border-border mb-8 transition-colors">
                 <div className="mb-3 flex items-center gap-2">
@@ -546,8 +546,8 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
                             disabled={isLlmLoading}
                         />
                     </div>
-                    <button 
-                        type="submit" 
+                    <button
+                        type="submit"
                         disabled={isLlmLoading || !llmQuery.trim()}
                         className="bg-primary hover:opacity-90 disabled:opacity-50 text-primary-foreground px-6 py-3 rounded-lg font-medium shadow-sm transition-colors flex items-center gap-2 whitespace-nowrap"
                     >
@@ -562,17 +562,17 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
 
             <div id="standard-analytics-charts" className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
                 <h2 className="text-xl font-bold text-foreground">Standard Analytics</h2>
-                
+
                 <div className="flex items-center gap-4">
                     {/* View Mode Toggles */}
                     <div className="flex bg-secondary p-1 rounded-lg">
-                        <button 
+                        <button
                             onClick={() => onViewModeChange('single')}
                             className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${viewMode === 'single' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                         >
                             Focus View
                         </button>
-                        <button 
+                        <button
                             onClick={() => onViewModeChange('grid')}
                             className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${viewMode === 'grid' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                         >
@@ -600,8 +600,8 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
                             ref={scrollRef}
                             {...scrollEvents}
                             className="flex gap-3 overflow-x-auto no-scrollbar py-2 px-4 scroll-smooth snap-x snap-mandatory"
-                            style={{ 
-                                cursor: 'grab', 
+                            style={{
+                                cursor: 'grab',
                                 WebkitOverflowScrolling: 'touch',
                                 msOverflowStyle: 'none',
                                 scrollbarWidth: 'none'
@@ -638,7 +638,7 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
                     {/* The Focused Chart */}
                     <div className="w-full min-h-[500px]">
                         {focusedChartId === 'llmGenerated' && llmChartData ? (
-                            <SortableChartCard 
+                            <SortableChartCard
                                 chart={{...llmChartData, fullWidth: true}}
                                 onToggleFloat={() => toggleFloatingWindow(llmChartData)}
                                 isFloating={floatingWindows.some(w => w.id === 'llmGenerated')}
@@ -647,7 +647,7 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
                                 {renderChart(llmChartData)}
                             </SortableChartCard>
                         ) : focusedChartId === loadedSavedChart?.id ? (
-                            <SortableChartCard 
+                            <SortableChartCard
                                 chart={{...loadedSavedChart, fullWidth: true}}
                                 onToggleFloat={() => toggleFloatingWindow(loadedSavedChart)}
                                 isFloating={floatingWindows.some(w => w.id === loadedSavedChart.id)}
@@ -671,9 +671,9 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
                     </div>
                 </div>
             ) : (
-                <DndContext 
-                    sensors={sensors} 
-                    collisionDetection={closestCenter} 
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
                     onDragStart={handleDragStart}
                     onDragEnd={handleDragEnd}
                     onDragCancel={handleDragCancel}

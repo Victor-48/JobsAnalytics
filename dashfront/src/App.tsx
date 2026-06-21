@@ -31,10 +31,32 @@ function AppContent() {
                 run={run}
                 steps={steps}
                 stepIndex={stepIndex}
-                continuous
+                continuous={true}
+
                 onEvent={(data: EventData) => {
-                    const { action, status, type } = data;
-                    if (['finished', 'skipped'].includes(status as string)) {
+                    const { action, status, type, step } = data;
+
+                    if (type === 'step:before') {
+                        const targetEl = document.querySelector(step.target as string) as HTMLElement;
+                        const scrollContainer = document.querySelector('main');
+
+                        if (targetEl && scrollContainer) {
+                            const containerRect = scrollContainer.getBoundingClientRect();
+                            const targetRect = targetEl.getBoundingClientRect();
+
+                            const offset = 50;
+                            const targetScrollTop = scrollContainer.scrollTop + (targetRect.top - containerRect.top) - offset;
+
+                            scrollContainer.scrollTo({
+                                top: targetScrollTop,
+                                behavior: 'smooth'
+                            });
+                        } else if (targetEl) {
+                            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }
+
+                    if (['finished', 'skipped'].includes(status as string) || action === 'close') {
                         stopTutorial();
                     } else if (['next', 'prev'].includes(action)) {
                         if (type === 'step:after') {
@@ -42,6 +64,7 @@ function AppContent() {
                         }
                     }
                 }}
+
                 options={{
                     arrowColor: 'hsl(var(--card))',
                     backgroundColor: 'hsl(var(--card))',
@@ -50,12 +73,13 @@ function AppContent() {
                     zIndex: 1000,
                     showProgress: true,
                     buttons: ['back', 'close', 'primary', 'skip'],
+
+                    skipScroll: true,
                 }}
             />
         </>
     );
 }
-
 function Navigation() {
     const location = useLocation();
     const { role, logout } = useAuth();

@@ -6,7 +6,6 @@ import AnalyticsCharts from "../components/AnalyticsCharts";
 import { SavedInsights, type SavedChart } from "../components/SavedInsights";
 import { useAuth } from "../contexts/AuthContext";
 import { useTutorial } from "../contexts/TutorialContext";
-import { RoleSwitcher } from "../components/RoleSwitcher";
 import MapChart, { type MapViewState } from "../components/MapChart";
 import KeyIndicators from "../components/KeyIndicators";
 import { NetworkCard } from "../components/NetworkCard";
@@ -70,7 +69,37 @@ export default function Dashboard() {
         {
             target: '#standard-analytics-charts',
             content: 'This section provides detailed, interactive charts on various market aspects. You can switch between a focused view and a grid view.',
-            placement: 'top',
+            placement: 'left',
+        },
+        {
+            target: '#standard-analytics-buttons',
+            content: 'Click these buttons to switch between different insights, like Salary comparisons or Postings over time. The interactive chart below will update automatically.',
+            placement: 'left',
+        },
+        {
+            target: '#tutorial-popout-chart',
+            content: 'Need a closer look? Click this button to pop the chart out into a larger, floating window.',
+            placement: 'bottom',
+        },
+        {
+            target: '#tutorial-drag-handle',
+            content: 'If you switch to Grid View, you can click and hold this handle to drag and reorganize the order of your charts.',
+            placement: 'bottom',
+        },
+        {
+            target: '#tutorial-save-chart',
+            content: 'Click this Save icon to bookmark this specific insight. It will be stored in your Saved Insights sidebar for quick access later.',
+            placement: 'bottom',
+        },
+        {
+            target: '#sidebar-toggle-btn',
+            content: 'Click this button to open or close the Saved Insights sidebar.',
+            placement: 'right',
+        },
+        {
+            target: '#saved-insights-sidebar',
+            content: 'Any charts you save using the Save icon will appear here. You can load them back up anytime to review your custom insights.',
+            placement: 'right',
         },
         {
             target: '#network-card',
@@ -90,7 +119,14 @@ export default function Dashboard() {
     ], [viewMode]);
 
     const handleTutorialStart = () => {
-        startTutorial(tutorialSteps);
+        const firstStepTarget = document.querySelector(tutorialSteps[0].target as string);
+
+        if (firstStepTarget) {
+            firstStepTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        setTimeout(() => {
+            startTutorial(tutorialSteps);
+        }, 300);
     };
 
     useEffect(() => {
@@ -148,19 +184,20 @@ export default function Dashboard() {
 
     return (
         <div className="flex w-full h-[calc(100vh-73px)] overflow-hidden bg-background text-foreground relative">
-            <RoleSwitcher />
-            <button onClick={() => setShowSavedInsights(prev => !prev)} className={`absolute top-1/2 -translate-y-1/2 z-30 w-6 h-16 bg-card border-y border-r border-border rounded-r-lg flex items-center justify-center transition-all duration-300 hover:bg-secondary group ${showSavedInsights ? "left-72" : "left-0"}`}>
+            <button id="sidebar-toggle-btn" onClick={() => setShowSavedInsights(prev => !prev)} className={`absolute top-1/2 -translate-y-1/2 z-30 w-6 h-16 bg-card border-y border-r border-border rounded-r-lg flex items-center justify-center transition-all duration-300 hover:bg-secondary group ${showSavedInsights ? "left-72" : "left-0"}`}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`text-muted-foreground group-hover:text-foreground transition-transform ${showSavedInsights ? "" : "rotate-180"}`}><path d="m15 18-6-6 6-6" /></svg>
             </button>
-            <aside className={`absolute left-0 top-0 bottom-0 w-72 bg-card border-r border-border overflow-y-auto z-20 transition-transform duration-300 hidden lg:block ${showSavedInsights ? "translate-x-0" : "-translate-x-full"}`}>
+
+            <aside id="saved-insights-sidebar" className={`absolute left-0 top-0 bottom-0 w-72 bg-card border-r border-border overflow-y-auto z-20 transition-transform duration-300 hidden lg:block ${showSavedInsights ? "translate-x-0" : "-translate-x-full"}`}>
                 <SavedInsights onLoadInsight={setLoadedSavedChart} />
             </aside>
+
             <main className={`flex-1 overflow-y-auto p-4 md:p-8 transition-all duration-300 ${showSavedInsights ? "lg:ml-72" : "ml-0"}`}>
                 <div className="max-w-6xl mx-auto pb-20">
                     <div id="kpi-indicators"><KeyIndicators /></div>
                     <div className="w-full mb-8">
-                        <AnalyticsCharts 
-                            initialLoadedChart={loadedSavedChart} 
+                        <AnalyticsCharts
+                            initialLoadedChart={loadedSavedChart}
                             viewMode={viewMode}
                             onViewModeChange={setViewMode}
                         />

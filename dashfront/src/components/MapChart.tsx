@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L, { LatLngExpression } from 'leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
@@ -69,6 +69,14 @@ function MapViewUpdater({ viewState }: { viewState: MapViewState }) {
     return null;
 }
 
+const createPermanentIcon = (count: number) => {
+    return L.divIcon({
+        html: `<div class="flex items-center justify-center w-full h-full bg-primary/80 text-primary-foreground font-bold text-xs rounded-full border-2 border-primary shadow-sm"><span>${count}</span></div>`,
+        className: 'bg-transparent',
+        iconSize: [30, 30],
+    });
+};
+
 // --- Main Component ---
 export interface MapViewState {
     center: LatLngExpression;
@@ -88,6 +96,7 @@ export default function MapChart({ locationData, viewState, onViewChange, isActi
     const [showOverlay, setShowOverlay] = useState(false);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const mapRef = useRef<L.Map>(null);
 
     useEffect(() => {
         const container = containerRef.current;
@@ -159,6 +168,14 @@ export default function MapChart({ locationData, viewState, onViewChange, isActi
         });
     };
 
+    const handleMarkerClick = (coords: [number, number]) => {
+        if (mapRef.current) {
+            mapRef.current.flyTo(coords, Math.max(mapRef.current.getZoom(), 16), {
+                duration: 0.75
+            });
+        }
+    };
+
     return (
         <div 
             ref={containerRef}
@@ -176,6 +193,7 @@ export default function MapChart({ locationData, viewState, onViewChange, isActi
             </div>
 
             <MapContainer 
+                ref={mapRef}
                 center={viewState.center}
                 zoom={viewState.zoom} 
                 style={{ height: '100%', width: '100%', minHeight: '400px', zIndex: 0 }}
@@ -197,17 +215,15 @@ export default function MapChart({ locationData, viewState, onViewChange, isActi
                     showCoverageOnHover={false}
                 >
                     {markers.map((marker, idx) => (
-                        <CircleMarker
+                        <Marker
                             key={`${marker.name}-${idx}`}
-                            center={marker.coords}
-                            radius={10}
-                            fillColor="hsl(var(--primary))"
-                            color="hsl(var(--primary))"
-                            weight={2}
-                            opacity={0.8}
-                            fillOpacity={0.6}
-                            // Pass the count to the marker options
+                            position={marker.coords}
+                            icon={createPermanentIcon(marker.count)}
+                            // @ts-ignore - Pass count to the marker options for the clusterer
                             count={marker.count}
+                            eventHandlers={{
+                                click: () => handleMarkerClick(marker.coords),
+                            }}
                         >
                             <Tooltip>
                                 <div className="text-center">
@@ -215,7 +231,7 @@ export default function MapChart({ locationData, viewState, onViewChange, isActi
                                     <span>{marker.count} Job{marker.count !== 1 ? 's' : ''}</span>
                                 </div>
                             </Tooltip>
-                        </CircleMarker>
+                        </Marker>
                     ))}
                 </MarkerClusterGroup>
             </MapContainer>
