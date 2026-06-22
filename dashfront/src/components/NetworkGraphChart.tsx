@@ -13,7 +13,7 @@ interface NetworkGraphChartProps {
     isTrendMode?: boolean;
 }
 
-// --- Robust Color Converter ---
+// --- Color Converter ---
 const toRgba = (color: string, alpha: number): string => {
     const tempDiv = document.createElement('div');
     tempDiv.style.color = color;
@@ -28,11 +28,10 @@ const toRgba = (color: string, alpha: number): string => {
     return 'rgba(0, 0, 0, 0.5)';
 };
 
-
 const MemoizedNetworkGraphChart = ({ data, highlightedNode, onNodeClick, onBackgroundClick, onLinkClick, isTrendMode = false }: NetworkGraphChartProps) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const fgRef = useRef<ForceGraphMethods | undefined>(undefined);
-    const [dimensions, setDimensions] = useState({ width: 0, height: 400 });
+    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const theme = useTheme();
 
     const sanitizedData = useMemo(() => ({
@@ -48,10 +47,8 @@ const MemoizedNetworkGraphChart = ({ data, highlightedNode, onNodeClick, onBackg
             return { highlightedNodes: new Set(), highlightedLinks: new Set() };
         }
 
-
         const nodes = new Set([highlightedNode.id]);
         const links = new Set();
-
 
         sanitizedData.links.forEach((link: any) => {
             if (link.source.id === highlightedNode.id) {
@@ -62,7 +59,6 @@ const MemoizedNetworkGraphChart = ({ data, highlightedNode, onNodeClick, onBackg
                 links.add(link);
             }
         });
-
 
         return { highlightedNodes: nodes, highlightedLinks: links };
     }, [highlightedNode, sanitizedData.links]);
@@ -77,18 +73,15 @@ const MemoizedNetworkGraphChart = ({ data, highlightedNode, onNodeClick, onBackg
             }
         };
 
-
         updateDimensions();
         window.addEventListener('resize', updateDimensions);
         return () => window.removeEventListener('resize', updateDimensions);
     }, []);
 
-    // Memoize colors to re-calculate only when the theme changes
-    const { nodeColor, linkColor, textColor, bgColor, trendEmergent, trendStable, trendFading } = useMemo(() => {
+    const { nodeColor, textColor, bgColor, trendEmergent, trendStable, trendFading } = useMemo(() => {
         const getCssVar = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
         return {
             nodeColor: `hsl(${getCssVar('--primary')})`,
-            linkColor: `hsl(${getCssVar('--border')})`,
             textColor: `hsl(${getCssVar('--foreground')})`,
             bgColor: `hsl(${getCssVar('--card')})`,
             trendEmergent: `hsl(${getCssVar('--chart-3')})`, // Orange
@@ -106,12 +99,12 @@ const MemoizedNetworkGraphChart = ({ data, highlightedNode, onNodeClick, onBackg
         return toRgba(nodeColor, isHighlighted ? 1.0 : 0.2);
     };
 
-    const getLinkColor = (link: any) => { // Use 'any' here because LinkObject doesn't know about our custom 'growth' property
+    const getLinkColor = (link: any) => {
         const isHighlighted = !highlightedNode || highlightedLinks.has(link);
 
-
-        let baseColor = linkColor;
-
+        // --- COLOR LOGIC UPDATE ---
+        const isDarkMode = document.documentElement.classList.contains('dark') || theme === 'dark';
+        let baseColor = isDarkMode ? '#ffffff' : '#000000';
 
         if (isTrendMode && link.growth !== undefined) {
             if (link.growth > 50) {
@@ -123,8 +116,7 @@ const MemoizedNetworkGraphChart = ({ data, highlightedNode, onNodeClick, onBackg
             }
         }
 
-
-        return toRgba(baseColor, isHighlighted ? 0.8 : 0.1);
+        return toRgba(baseColor, isHighlighted ? 0.7 : 0.15);
     };
 
     return (
@@ -136,16 +128,20 @@ const MemoizedNetworkGraphChart = ({ data, highlightedNode, onNodeClick, onBackg
                     height={dimensions.height}
                     graphData={sanitizedData}
 
-
                     nodeVal={node => node.value || 1}
                     nodeRelSize={4}
                     nodeColor={getNodeColor}
                     linkColor={getLinkColor}
+
+                    // --- THICKNESS LOGIC UPDATE ---
                     linkWidth={link => {
                         const isHighlighted = !highlightedNode || highlightedLinks.has(link);
-                        return isHighlighted ? Math.max(1, (link.value || 1) / 5) : 1;
-                    }}
+                        // Increase minimum thickness to 3, and add scaling based on value
+                        // Adjust the divisor (e.g., 5) depending on how large your values get
+                        const scaledThickness = 3 + ((link.value || 1) / 5);
 
+                        return isHighlighted ? scaledThickness : 1.5;
+                    }}
 
                     nodeCanvasObject={(node: NodeObject, ctx: CanvasRenderingContext2D, globalScale: number) => {
                         const label = node.id as string;
@@ -158,7 +154,6 @@ const MemoizedNetworkGraphChart = ({ data, highlightedNode, onNodeClick, onBackg
                         ctx.fillText(label, node.x || 0, (node.y || 0) + 12);
                     }}
                     nodeCanvasObjectMode={() => 'after'}
-
 
                     onNodeClick={onNodeClick}
                     onBackgroundClick={onBackgroundClick}

@@ -93,8 +93,20 @@ export default function Dashboard() {
         },
         {
             target: '#sidebar-toggle-btn',
-            content: 'Click this button to open or close the Saved Insights sidebar.',
+            content: showSavedInsights
+                ? 'This is the button that toggles the Saved Insights sidebar. Click Next to continue.'
+                : 'Click this button to open the Saved Insights sidebar.',
             placement: 'right',
+            spotlightClicks: true,
+
+            styles: {
+                buttonNext: !showSavedInsights ? {
+                    backgroundColor: 'hsl(var(--muted))',
+                    color: 'hsl(var(--muted-foreground))',
+                    cursor: 'not-allowed',
+                    pointerEvents: 'none',
+                } : undefined
+            } as any
         },
         {
             target: '#saved-insights-sidebar',
@@ -116,7 +128,7 @@ export default function Dashboard() {
             content: 'Now, let\'s explore the jobs table to see the raw data.',
             placement: 'bottom',
         },
-    ], [viewMode]);
+    ], [viewMode, showSavedInsights]);
 
     const handleTutorialStart = () => {
         const firstStepTarget = document.querySelector(tutorialSteps[0].target as string);
@@ -182,9 +194,17 @@ export default function Dashboard() {
         onBackgroundClick: () => setHighlightedNode(null),
     };
 
+    const handleSidebarToggle = () => {
+        setShowSavedInsights(prev => !prev);
+    };
+
     return (
         <div className="flex w-full h-[calc(100vh-73px)] overflow-hidden bg-background text-foreground relative">
-            <button id="sidebar-toggle-btn" onClick={() => setShowSavedInsights(prev => !prev)} className={`absolute top-1/2 -translate-y-1/2 z-30 w-6 h-16 bg-card border-y border-r border-border rounded-r-lg flex items-center justify-center transition-all duration-300 hover:bg-secondary group ${showSavedInsights ? "left-72" : "left-0"}`}>
+            <button
+                id="sidebar-toggle-btn"
+                onClick={handleSidebarToggle}
+                className={`absolute top-1/2 -translate-y-1/2 z-30 w-6 h-16 bg-card border-y border-r border-border rounded-r-lg flex items-center justify-center transition-all duration-300 hover:bg-secondary group ${showSavedInsights ? "left-72" : "left-0"}`}
+            >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`text-muted-foreground group-hover:text-foreground transition-transform ${showSavedInsights ? "" : "rotate-180"}`}><path d="m15 18-6-6 6-6" /></svg>
             </button>
 

@@ -59,7 +59,7 @@ export function FloatingWindow({ chart, onClose, children, index }: any) {
         }
     };
 
-    // --- Dynamic Styles based on state ---
+    // --- GenericDynamicChart.tsx Styles based on state ---
     const containerClasses = isMinimized
         ? `fixed z-[100] bg-card border border-primary/50 shadow-md shadow-primary/20 rounded-lg py-2 px-4 transition-all duration-300 w-auto min-w-[200px] flex items-center justify-between cursor-grab active:cursor-grabbing`
         : `fixed z-[100] w-[420px] bg-card border border-border rounded-xl p-4 transition-all duration-300 shadow-2xl ${isDragging ? 'opacity-100 ring-2 ring-primary/50 scale-[1.01]' : 'opacity-95 hover:opacity-100 scale-100'}`;

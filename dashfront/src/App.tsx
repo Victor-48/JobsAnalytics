@@ -10,6 +10,9 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { TutorialProvider } from "./contexts/TutorialContext";
 import {Joyride, EventData } from 'react-joyride';
 import { useTutorial } from './contexts/TutorialContext';
+import { AnalyticsProvider } from "./contexts/AnalyticsContext";
+import { Toaster } from "./components/ui/sonner";
+
 
 function AppContent() {
     const { run, steps, stepIndex, stopTutorial, nextStep, prevStep } = useTutorial();
@@ -75,6 +78,7 @@ function AppContent() {
                     buttons: ['back', 'close', 'primary', 'skip'],
 
                     skipScroll: true,
+                    overlayClickAction: false
                 }}
             />
         </>
@@ -126,9 +130,12 @@ export default function App() {
     return (
         <AuthProvider>
             <TutorialProvider>
+                <AnalyticsProvider>
                 <Router>
                     <AppContent />
                 </Router>
+                    <Toaster richColors position="top-center" />
+            </AnalyticsProvider>
             </TutorialProvider>
         </AuthProvider>
     );

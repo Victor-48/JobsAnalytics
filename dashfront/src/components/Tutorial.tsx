@@ -33,7 +33,6 @@ export const Tutorial = ({ steps, onClose }: TutorialProps) => {
         if (element) {
             element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
 
-            // Initial position after a short delay to allow smooth scrolling to start
             setTimeout(updatePosition, 100);
         }
 
@@ -82,8 +81,8 @@ export const Tutorial = ({ steps, onClose }: TutorialProps) => {
         const baseStyle: React.CSSProperties = {
             position: 'fixed',
             zIndex: 101,
-            pointerEvents: 'auto', // Make the popup itself clickable
-            transition: 'all 0.1s ease-out', // Match highlight transition
+            pointerEvents: 'auto',
+            transition: 'all 0.1s ease-out',
         };
 
         switch (position) {

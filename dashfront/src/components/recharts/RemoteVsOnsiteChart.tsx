@@ -1,15 +1,16 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { useAnalytics } from '../../contexts/AnalyticsContext';
 
-export const RemoteVsOnsiteChart = () => {
-    const { data, isLoading } = useAnalytics();
+interface Props {
+    data: any[];
+}
 
-    if (isLoading) return <div>Loading...</div>;
+export const RemoteVsOnsiteChart = ({ data }: Props) => {
+    if (!data || data.length === 0) return null;
 
     return (
         <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data.remoteVsOnsite} margin={{ top: 20, right: 10, left: 10, bottom: 20 }}>
+            <BarChart data={data} margin={{ top: 20, right: 10, left: 10, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                 <XAxis dataKey="name" tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dy={10} />
                 <YAxis tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dx={-10} />

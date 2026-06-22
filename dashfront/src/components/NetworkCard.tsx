@@ -59,7 +59,7 @@ export function NetworkCard({
                                 </h2>
                             </div>
                         </Button>
-                        <div className="flex items-center gap-2 mt-2">
+                        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                             <DateRangePicker date={dateRange} onDateChange={onDateChange} />
                             {dateRange && (
                                 <Button variant="ghost" size="icon" onClick={() => onDateChange(undefined)} title="Reset date range">

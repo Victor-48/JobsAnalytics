@@ -2,11 +2,14 @@ package org.example.dashboardj.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.concurrent.TimeUnit;
 
 @Configuration
 @Slf4j
@@ -23,6 +26,12 @@ public class GraphConfig {
 
     @Bean
     public Driver driver() {
+        Config config = Config.builder()
+                .withMaxConnectionLifetime(30, TimeUnit.MINUTES)
+                .withMaxConnectionPoolSize(50)
+                .withConnectionAcquisitionTimeout(2, TimeUnit.MINUTES)
+                .build();
+
         Driver driver;
 
         if (password == null || password.isBlank()) {
