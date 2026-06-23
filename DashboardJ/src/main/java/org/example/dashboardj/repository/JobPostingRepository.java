@@ -23,11 +23,6 @@ public interface JobPostingRepository extends Neo4jRepository<JobPosting, String
 
     List<JobPosting> findByCompanyContainingIgnoreCase(String company);
 
-    @Query("MATCH (j:JobPosting) " +
-           "OPTIONAL MATCH (j)-[r:REQUIRES]->(l:ProgrammingLanguage) " +
-           "RETURN j, collect(r), collect(l)")
-    List<JobPosting> findAllWithLanguages();
-
     @Query("MATCH (j:JobPosting) WHERE toLower(j.industry) CONTAINS toLower($industry) RETURN j")
     List<JobPosting> findJobsByIndustrySafe(@Param("industry") String industry);
 

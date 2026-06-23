@@ -12,6 +12,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.neo4j.core.Neo4jClient;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -24,6 +25,7 @@ public class JobPostingServiceImpl implements JobPostingService {
 
     private final JobPostingRepository jobRepo;
     private final ProgrammingLanguageRepository langRepo;
+    private final Neo4jClient neo4jClient;
 
     private JobPostingDTO mapToDTO(JobPosting job) {
         return new JobPostingDTO() {
@@ -52,7 +54,6 @@ public class JobPostingServiceImpl implements JobPostingService {
             try {
                 date = LocalDate.parse(dto.getPostedDate().split("T")[0]);
             } catch (Exception e) {
-                // Log error or handle as needed
             }
         }
         
@@ -73,11 +74,51 @@ public class JobPostingServiceImpl implements JobPostingService {
                 .build();
     }
 
+    private List<JobPostingDTO> fetchAllJobsAsDTO() {
+        String query = """
+        MATCH (j:JobPosting)
+        OPTIONAL MATCH (j)-[:REQUIRES]->(l:ProgrammingLanguage)
+        RETURN j.id as id, j.title as title, j.company as company,
+               j.location as location, j.postedDate as postedDate,
+               j.salary as salary, j.currency as currency,
+               j.experienceLevel as experienceLevel, j.industry as industry,
+               j.naceCode as naceCode, j.remoteFlexibility as remoteFlexibility,
+               j.employmentType as employmentType,
+               collect(l.name) as languages
+        """;
+
+        return neo4jClient.query(query).fetch().all().stream()
+                .map(row -> {
+                    JobPostingDTO dto = new JobPostingDTO();
+                    Object id = row.get("id");
+                    dto.setId(id != null ? id.toString() : null);
+                    dto.setTitle((String) row.get("title"));
+                    dto.setCompany((String) row.get("company"));
+                    dto.setLocation((String) row.get("location"));
+                    Object date = row.get("postedDate");
+                    dto.setPostedDate(date != null ? date.toString() : null);
+                    Object salary = row.get("salary");
+                    dto.setSalary(salary != null ? ((Number) salary).doubleValue() : null);
+                    dto.setCurrency((String) row.get("currency"));
+                    dto.setExperienceLevel((String) row.get("experienceLevel"));
+                    dto.setIndustry((String) row.get("industry"));
+                    Object naceCode = row.get("naceCode");
+                    dto.setNaceCode(naceCode != null ? naceCode.toString() : null);
+                    dto.setRemoteFlexibility((String) row.get("remoteFlexibility"));
+                    dto.setEmploymentType((String) row.get("employmentType"));
+                    @SuppressWarnings("unchecked")
+                    List<String> langs = (List<String>) row.get("languages");
+                    dto.setRequiredLanguages(langs != null ? langs.stream()
+                            .filter(l -> l != null && !l.isEmpty())
+                            .collect(Collectors.toList()) : new ArrayList<>());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+    
     @Override
     public Page<JobPostingDTO> getAllJobs(Pageable pageable, String remoteFlexibility, String industry) {
-        List<JobPostingDTO> allJobs = jobRepo.findAllWithLanguages().stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
+        List<JobPostingDTO> allJobs = fetchAllJobsAsDTO();
 
         Stream<JobPostingDTO> stream = allJobs.stream();
 
@@ -100,7 +141,7 @@ public class JobPostingServiceImpl implements JobPostingService {
     
     @Override
     public List<JobPostingDTO> getAllJobs() {
-        return jobRepo.findAllWithLanguages().stream().map(this::mapToDTO).collect(Collectors.toList());
+        return fetchAllJobsAsDTO();
     }
 
     @Override
@@ -147,7 +188,6 @@ public class JobPostingServiceImpl implements JobPostingService {
         
         existingJob.setTitle(dto.getTitle());
         existingJob.setCompany(dto.getCompany());
-        // ... set other fields from dto ...
         existingJob.setRequiredLanguages(newLanguages);
         
         JobPosting savedJob = jobRepo.save(existingJob);
@@ -219,7 +259,6 @@ public class JobPostingServiceImpl implements JobPostingService {
         return jobRepo.findByTitleContainingIgnoreCase(title, pageable).map(this::mapToDTO);
     }
 
-    // ... other analytics methods remain the same ...
     @Override
     public Map<String, Double> getAverageSalaryByIndustry() {
         return jobRepo.getAverageSalaryByIndustry().stream()

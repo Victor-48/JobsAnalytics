@@ -36,10 +36,10 @@ public class GraphConfig {
 
         if (password == null || password.isBlank()) {
             log.info("Initializing Neo4j driver without authentication (URI: {})", uri);
-            driver = GraphDatabase.driver(uri);
+            driver = GraphDatabase.driver(uri,config);
         } else {
             log.info("Initializing Neo4j driver with authentication (URI: {}, User: {})", uri, username);
-            driver = GraphDatabase.driver(uri, AuthTokens.basic(username, password));
+            driver = GraphDatabase.driver(uri, AuthTokens.basic(username, password), config);
         }
 
         return driver;

@@ -8,6 +8,7 @@ import org.springframework.data.neo4j.core.schema.Relationship;
 import org.springframework.data.neo4j.core.support.UUIDStringGenerator;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Node("JobPosting")
@@ -37,5 +38,6 @@ public class JobPosting {
     private String employmentType;
     private Integer satisfactionScore;
 
-    private List<ProgrammingLanguage> requiredLanguages;
+    @Relationship(type = "REQUIRES", direction = Relationship.Direction.OUTGOING)
+    private List<ProgrammingLanguage> requiredLanguages = new ArrayList<>();
 }
