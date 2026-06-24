@@ -12,11 +12,8 @@ export default function TimeSeriesChart() {
             if (rawData) {
                 // Convert Map<String, Long> to Array of objects for Recharts
                 const formatted = Object.keys(rawData)
-                    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime()) // Ensure chronological order
-                    .map(key => ({
-                        date: key,
-                        count: rawData[key]
-                    }));
+                    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())// Ensure chronological order
+                    .map(key => ({ date: key, count: rawData[key] }));
                 setData(formatted);
             }
         }).catch(console.error);

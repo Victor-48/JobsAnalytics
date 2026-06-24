@@ -56,9 +56,8 @@ public interface JobPostingRepository extends Neo4jRepository<JobPosting, String
            "RETURN j.employmentType as name, count(j) as count")
     List<CountResultDTO> getEmploymentTypeDistribution();
 
-    @Query("MATCH (j:JobPosting) " +
-           "WHERE j.postedDate IS NOT NULL " +
-           "RETURN toString(j.postedDate) as name, count(j) as count")
+    @Query("MATCH (j:JobPosting) WHERE j.postedDate IS NOT NULL " +
+            "RETURN substring(toString(j.postedDate), 0, 10) as name, count(j) as count")
     List<CountResultDTO> getJobPostingsOverTime();
 
     @Query("MATCH (j:JobPosting) " +

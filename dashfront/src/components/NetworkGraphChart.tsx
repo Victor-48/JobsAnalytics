@@ -64,18 +64,17 @@ const MemoizedNetworkGraphChart = ({ data, highlightedNode, onNodeClick, onBackg
     }, [highlightedNode, sanitizedData.links]);
 
     useEffect(() => {
-        const updateDimensions = () => {
+        if (!containerRef.current) return;
+        const observer = new ResizeObserver(() => {
             if (containerRef.current) {
                 setDimensions({
                     width: containerRef.current.offsetWidth,
                     height: 400,
                 });
             }
-        };
-
-        updateDimensions();
-        window.addEventListener('resize', updateDimensions);
-        return () => window.removeEventListener('resize', updateDimensions);
+        });
+        observer.observe(containerRef.current);
+        return () => observer.disconnect();
     }, []);
 
     const { nodeColor, textColor, bgColor, trendEmergent, trendStable, trendFading } = useMemo(() => {

@@ -85,16 +85,20 @@ export function NetworkCard({
                             <p>Loading graph...</p>
                         </div>
                     )}
-                    {data && (
+                    {data && data.nodes.length > 0 && (
                         <NetworkGraphChart 
-                            key={isMaximized ? 'maximized' : 'normal'}
-                            data={data} 
+                            data={data}
                             highlightedNode={highlightedNode}
                             onNodeClick={onNodeClick}
                             onBackgroundClick={onBackgroundClick}
                             onLinkClick={setSelectedLink}
                             isTrendMode={isTrendMode}
                         />
+                    )}
+                    {(!data || data.nodes.length === 0) && !isLoading && (
+                        <div className="h-[400px] flex items-center justify-center bg-muted/20 rounded-xl border border-dashed border-border text-muted-foreground">
+                            No co-occurrence data for selected period.
+                        </div>
                     )}
                 </div>
                 <GraphLegend isTrendMode={isTrendMode} />

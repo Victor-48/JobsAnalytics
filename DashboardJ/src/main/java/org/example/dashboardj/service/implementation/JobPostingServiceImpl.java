@@ -86,7 +86,6 @@ public class JobPostingServiceImpl implements JobPostingService {
                j.employmentType as employmentType,
                collect(l.name) as languages
         """;
-
         return neo4jClient.query(query).fetch().all().stream()
                 .map(row -> {
                     JobPostingDTO dto = new JobPostingDTO();

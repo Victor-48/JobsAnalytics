@@ -19,7 +19,6 @@ public interface JobPostingService {
     Page<JobPostingDTO> searchByTitle(String title, Pageable pageable);
     List<JobPostingDTO> searchByTitle(String title);
     
-    // Analytics methods
     Map<String, Double> getAverageSalaryByIndustry();
     Map<String, Long> getSalaryDistributionByExperience();
     Map<String, Double> getRemoteVsOnsiteStats();
@@ -31,6 +30,5 @@ public interface JobPostingService {
     // Time Series
     Map<String, Long> getJobPostingsOverTime();
     
-    // Key Indicators
     List<KeyIndicatorDTO> getKeyIndicators();
 }
