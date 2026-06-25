@@ -17,7 +17,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString(exclude = "requiredLanguages")
+@ToString(exclude = {"requiredSkills", "sector", "occupation"})
 public class JobPosting {
     @Id
     @GeneratedValue(UUIDStringGenerator.class)
@@ -32,12 +32,18 @@ public class JobPosting {
     private Double salary;
     private String currency;
     private String experienceLevel;
-    private String industry; 
-    private String naceCode; 
+    
+    @Relationship(type = "BELONGS_TO_SECTOR", direction = Relationship.Direction.OUTGOING)
+    private Sector sector;
     private String remoteFlexibility;
     private String employmentType;
     private Integer satisfactionScore;
 
-    @Relationship(type = "REQUIRES", direction = Relationship.Direction.OUTGOING)
-    private List<ProgrammingLanguage> requiredLanguages = new ArrayList<>();
+    @Relationship(type = "REQUIRES_SKILL", direction = Relationship.Direction.OUTGOING)
+    private List<Skill> requiredSkills = new ArrayList<>();
+
+    @Relationship(type = "IS_OCCUPATION", direction = Relationship.Direction.OUTGOING)
+    private Occupation occupation;
+
+    private String createdByUserId;
 }

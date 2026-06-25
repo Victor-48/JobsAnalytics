@@ -36,8 +36,7 @@ public class GraphRepository {
                         "id", jobPosting.getId(),
                         "title", jobPosting.getTitle(),
                         "company", jobPosting.getCompany(),
-                        "postedDate", jobPosting.getPostedDate() != null ? jobPosting.getPostedDate().toString() : null,
-                        "languages", jobPosting.getRequiredLanguages()
+                        "postedDate", jobPosting.getPostedDate() != null ? jobPosting.getPostedDate().toString() : null
                 ));
                 return null;
             });

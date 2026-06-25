@@ -23,11 +23,11 @@ public interface JobPostingRepository extends Neo4jRepository<JobPosting, String
 
     List<JobPosting> findByCompanyContainingIgnoreCase(String company);
 
-    @Query("MATCH (j:JobPosting) WHERE toLower(j.industry) CONTAINS toLower($industry) RETURN j")
+    @Query("MATCH (j:JobPosting)-[:BELONGS_TO_SECTOR]->(s:Sector) WHERE toLower(s.name) CONTAINS toLower($industry) RETURN j")
     List<JobPosting> findJobsByIndustrySafe(@Param("industry") String industry);
 
-    @Query("MATCH (j:JobPosting) WHERE j.industry IS NOT NULL " +
-           "RETURN j.industry as name, count(j) as count " +
+    @Query("MATCH (j:JobPosting)-[:BELONGS_TO_SECTOR]->(s:Sector) " +
+           "RETURN s.name as name, count(j) as count " +
            "ORDER BY count DESC LIMIT 1")
     List<CountResultDTO> findTopIndustry();
 
@@ -36,9 +36,9 @@ public interface JobPostingRepository extends Neo4jRepository<JobPosting, String
            "ORDER BY count DESC LIMIT 1")
     List<CountResultDTO> findTopRole();
 
-    @Query("MATCH (j:JobPosting) " +
-           "WHERE j.industry IS NOT NULL AND j.salary IS NOT NULL " +
-           "RETURN j.industry as name, avg(j.salary) as value")
+    @Query("MATCH (j:JobPosting)-[:BELONGS_TO_SECTOR]->(s:Sector) " +
+           "WHERE j.salary IS NOT NULL " +
+           "RETURN s.name as name, avg(j.salary) as value")
     List<AverageSalaryDTO> getAverageSalaryByIndustry();
 
     @Query("MATCH (j:JobPosting) " +
@@ -60,8 +60,8 @@ public interface JobPostingRepository extends Neo4jRepository<JobPosting, String
             "RETURN substring(toString(j.postedDate), 0, 10) as name, count(j) as count")
     List<CountResultDTO> getJobPostingsOverTime();
 
-    @Query("MATCH (j:JobPosting) " +
-           "WHERE j.naceCode = $naceCode AND j.title IS NOT NULL " +
+    @Query("MATCH (j:JobPosting)-[:BELONGS_TO_SECTOR]->(s:Sector {uri: $naceCode}) " +
+           "WHERE j.title IS NOT NULL " +
            "RETURN j.title as name, count(j) as count")
     List<CountResultDTO> getSubSectorsByNaceCode(@Param("naceCode") String naceCode);
 
@@ -70,7 +70,7 @@ public interface JobPostingRepository extends Neo4jRepository<JobPosting, String
            "RETURN j.location as name, count(j) as count")
     List<CountResultDTO> getJobLocations();
 
-    @Query("MATCH (s1:ProgrammingLanguage {name: $skill1})<-[:REQUIRES]-(j:JobPosting)-[:REQUIRES]->(s2:ProgrammingLanguage {name: $skill2}) " +
+    @Query("MATCH (s1:Skill {name: $skill1})<-[:REQUIRES_SKILL]-(j:JobPosting)-[:REQUIRES_SKILL]->(s2:Skill {name: $skill2}) " +
            "RETURN j.title as name, count(j) as count " +
            "ORDER BY count DESC")
     List<CountResultDTO> findJobTitlesBySkills(@Param("skill1") String skill1, @Param("skill2") String skill2);

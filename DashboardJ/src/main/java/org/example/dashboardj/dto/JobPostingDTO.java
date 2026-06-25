@@ -13,13 +13,20 @@ public class JobPostingDTO {
     private String company;
     private String location;
     private String postedDate;
-    private List<String> requiredLanguages;
 
     private Double salary;
     private String currency;
     private String experienceLevel;
-    private String industry;
-    private String naceCode; 
     private String remoteFlexibility;
     private String employmentType;
+
+    // ESCO-NACE Input fields (for creating/updating)
+    private String sectorUri;
+    private String occupationUri;
+    private List<String> requiredSkillUris;
+
+    // ESCO-NACE Output objects (for reading)
+    private SectorDTO sector;
+    private OccupationDetailDTO occupation;
+    private List<SkillSummaryDTO> requiredSkills;
 }
