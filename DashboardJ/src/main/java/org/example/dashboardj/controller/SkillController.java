@@ -35,4 +35,17 @@ public class SkillController {
     public ResponseEntity<List<CountResultDTO>> getTopSkills() {
         return ResponseEntity.ok(service.getTopSkills());
     }
+
+    @GetMapping("/co-occurrence")
+    public ResponseEntity<org.example.dashboardj.dto.GraphDataDTO> getSkillCoOccurrence(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        return ResponseEntity.ok(service.getSkillCoOccurrence());
+    }
+
+    @GetMapping("/co-occurrence-trends")
+    public ResponseEntity<org.example.dashboardj.dto.GraphDataDTO> getSkillCoOccurrenceTrends(
+            @RequestParam(required = false) String referenceDate) {
+        return ResponseEntity.ok(service.getSkillCoOccurrenceTrends());
+    }
 }

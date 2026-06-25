@@ -15,4 +15,16 @@ public interface SkillRepository extends Neo4jRepository<Skill, String> {
            "RETURN s.name as name, count(j) as count " +
            "ORDER BY count DESC LIMIT 10")
     List<CountResultDTO> findTopSkills();
+
+    @Query("MATCH (s1:Skill)<-[:REQUIRES_SKILL]-(j:JobPosting)-[:REQUIRES_SKILL]->(s2:Skill) " +
+           "WHERE elementId(s1) < elementId(s2) " +
+           "RETURN s1.name as source, s2.name as target, count(j) as value " +
+           "ORDER BY value DESC LIMIT 50")
+    List<org.example.dashboardj.dto.GraphLinkDTO> getSkillCoOccurrence();
+
+    @Query("MATCH (s1:Skill)<-[:REQUIRES_SKILL]-(j:JobPosting)-[:REQUIRES_SKILL]->(s2:Skill) " +
+           "WHERE elementId(s1) < elementId(s2) " +
+           "RETURN s1.name as source, s2.name as target, count(j) as value, 5.0 as growth " +
+           "ORDER BY value DESC LIMIT 50")
+    List<org.example.dashboardj.dto.GraphLinkTrendDTO> getSkillCoOccurrenceTrends();
 }

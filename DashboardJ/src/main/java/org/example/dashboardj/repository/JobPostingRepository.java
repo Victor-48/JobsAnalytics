@@ -38,7 +38,7 @@ public interface JobPostingRepository extends Neo4jRepository<JobPosting, String
 
     @Query("MATCH (j:JobPosting)-[:BELONGS_TO_SECTOR]->(s:Sector) " +
            "WHERE j.salary IS NOT NULL " +
-           "RETURN s.name as name, avg(j.salary) as value")
+           "RETURN s.conceptUri as name, avg(j.salary) as value")
     List<AverageSalaryDTO> getAverageSalaryByIndustry();
 
     @Query("MATCH (j:JobPosting) " +
