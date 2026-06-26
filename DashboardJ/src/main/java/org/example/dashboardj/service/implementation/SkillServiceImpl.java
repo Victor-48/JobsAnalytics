@@ -43,7 +43,7 @@ public class SkillServiceImpl implements SkillService {
     @Override
     public List<java.util.Map<String, Object>> getTopSkills() {
         return new java.util.ArrayList<>(neo4jClient.query("MATCH (s:Skill)<-[:REQUIRES_SKILL]-(j:JobPosting) " +
-               "RETURN s.name as name, count(j) as count " +
+               "RETURN s.preferredLabel as name, count(j) as count " +
                "ORDER BY count DESC LIMIT 10")
             .fetch().all());
     }

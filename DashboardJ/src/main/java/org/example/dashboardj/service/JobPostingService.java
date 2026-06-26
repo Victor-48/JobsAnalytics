@@ -16,6 +16,7 @@ public interface JobPostingService {
     JobPostingDTO updateJob(String id, JobPostingDTO dto);
     List<JobPostingDTO> createJobs(List<JobPostingDTO> dtos); // Bulk insert method
     void deleteJob(String id);
+    Object debugQuery(String query);
     Page<JobPostingDTO> searchByTitle(String title, Pageable pageable);
     List<JobPostingDTO> searchByTitle(String title);
     
@@ -24,11 +25,13 @@ public interface JobPostingService {
     Map<String, Double> getRemoteVsOnsiteStats();
     Map<String, Long> getEmploymentTypeDistribution();
     Map<String, Long> getSubSectorsByNaceCode(String naceCode);
-    Map<String, Long> getJobLocations();
+    Object getJobLocations();
     Map<String, Long> getJobTitlesBySkills(String skill1, String skill2);
     
     // Time Series
     Map<String, Long> getJobPostingsOverTime();
     
     List<KeyIndicatorDTO> getKeyIndicators();
+    
+    void generateTestData();
 }

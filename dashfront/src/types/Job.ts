@@ -1,18 +1,27 @@
+import type { SectorDTO, OccupationDetailDTO, SkillSummaryDTO } from "../api/escoApi";
+
 export interface JobPosting {
     id?: string;
     title: string;
     company: string;
     location: string;
     postedDate: string;
-    requiredLanguages: string[];
 
     // Analytics fields
     salary?: number;
     currency?: string;
     experienceLevel?: string;
-    industry?: string;
-    naceCode?: string; // Added NACE Code
     remoteFlexibility?: string;
     employmentType?: string;
-    satisfactionScore?: number; // Re-adding for backward compatibility if backend sends it
+    satisfactionScore?: number;
+
+    // ESCO-NACE Input fields
+    sectorUri?: string;
+    occupationUri?: string;
+    requiredSkillUris?: string[];
+
+    // ESCO-NACE Output objects
+    sector?: SectorDTO;
+    occupation?: OccupationDetailDTO;
+    requiredSkills?: SkillSummaryDTO[];
 }

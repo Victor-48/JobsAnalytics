@@ -71,6 +71,11 @@ public class JobPostingController {
 
     // Analytics Endpoints
 
+    @GetMapping("/debug")
+    public ResponseEntity<Object> debugCypher(@RequestParam String query) {
+        return ResponseEntity.ok(service.debugQuery(query));
+    }
+
     @GetMapping("/stats/key-indicators")
     public ResponseEntity<List<KeyIndicatorDTO>> getKeyIndicators() {
         return ResponseEntity.ok(service.getKeyIndicators());
@@ -116,42 +121,13 @@ public class JobPostingController {
 
     // Geospatial Endpoint
     @GetMapping("/stats/locations")
-    public ResponseEntity<Map<String, Long>> getJobLocations() {
+    public ResponseEntity<Object> getJobLocations() {
         return ResponseEntity.ok(service.getJobLocations());
     }
 
     @PostMapping("/generate-test-data")
     public ResponseEntity<String> generateTestData() {
-        // Find existing sectors, skills, and occupations to link to
-        JobPostingDTO job1 = JobPostingDTO.builder()
-            .title("Senior Java Developer")
-            .company("TechNova")
-            .location("Remote")
-            .postedDate("2026-06-25T10:00:00Z")
-            .salary(120000.0)
-            .currency("USD")
-            .experienceLevel("Senior")
-            .remoteFlexibility("Remote")
-            .employmentType("Full-time")
-            // Provide known URIs if possible, or leave null to just test basic fields.
-            // Ideally we'd fetch them here, but for test purposes we just save the job
-            .build();
-
-        JobPostingDTO job2 = JobPostingDTO.builder()
-            .title("Data Scientist")
-            .company("Analytics Corp")
-            .location("New York")
-            .postedDate("2026-06-24T10:00:00Z")
-            .salary(110000.0)
-            .currency("USD")
-            .experienceLevel("Mid")
-            .remoteFlexibility("Hybrid")
-            .employmentType("Full-time")
-            .build();
-
-        service.createJob(job1);
-        service.createJob(job2);
-
+        service.generateTestData();
         return ResponseEntity.ok("Test jobs generated.");
     }
 }

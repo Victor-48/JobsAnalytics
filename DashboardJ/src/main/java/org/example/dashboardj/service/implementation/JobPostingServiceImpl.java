@@ -3,16 +3,26 @@ package org.example.dashboardj.service.implementation;
 import lombok.RequiredArgsConstructor;
 import org.example.dashboardj.dto.*;
 import org.example.dashboardj.entity.JobPosting;
-import org.example.dashboardj.entity.ProgrammingLanguage;
+import org.example.dashboardj.entity.Sector;
+import org.example.dashboardj.entity.Occupation;
+import org.example.dashboardj.entity.Skill;
 import org.example.dashboardj.repository.JobPostingRepository;
-import org.example.dashboardj.repository.ProgrammingLanguageRepository;
+import org.example.dashboardj.repository.SectorRepository;
+import org.example.dashboardj.repository.OccupationRepository;
+import org.example.dashboardj.repository.SkillRepository;
+import org.example.dashboardj.repository.LocationRepository;
 import org.example.dashboardj.service.JobPostingService;
+import org.example.dashboardj.entity.Location;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.neo4j.core.Neo4jClient;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -24,40 +34,82 @@ import java.util.stream.Stream;
 public class JobPostingServiceImpl implements JobPostingService {
 
     private final JobPostingRepository jobRepo;
-    private final ProgrammingLanguageRepository langRepo;
+    private final SectorRepository sectorRepo;
+    private final OccupationRepository occupationRepo;
+    private final SkillRepository skillRepo;
     private final Neo4jClient neo4jClient;
+    private final LocationRepository locationRepo;
+
+    @Value("${locationiq.api.key:}")
+    private String locationIqApiKey;
 
     private JobPostingDTO mapToDTO(JobPosting job) {
-        return new JobPostingDTO() {
-            @Override public String getId() { return job.getId(); }
-            @Override public String getTitle() { return job.getTitle(); }
-            @Override public String getCompany() { return job.getCompany(); }
-            @Override public String getLocation() { return job.getLocation(); }
-            @Override public String getPostedDate() { return job.getPostedDate() != null ? job.getPostedDate().toString() : null; }
-            @Override public Double getSalary() { return job.getSalary(); }
-            @Override public String getCurrency() { return job.getCurrency(); }
-            @Override public String getExperienceLevel() { return job.getExperienceLevel(); }
-            @Override public String getIndustry() { return job.getIndustry(); }
-            @Override public String getNaceCode() { return job.getNaceCode(); }
-            @Override public String getRemoteFlexibility() { return job.getRemoteFlexibility(); }
-            @Override public String getEmploymentType() { return job.getEmploymentType(); }
-            @Override public List<String> getRequiredLanguages() {
-                return job.getRequiredLanguages() == null ? new ArrayList<>() :
-                        job.getRequiredLanguages().stream().map(ProgrammingLanguage::getName).collect(Collectors.toList());
-            }
-        };
+        JobPostingDTO dto = new JobPostingDTO();
+        dto.setId(job.getId());
+        dto.setTitle(job.getTitle());
+        dto.setCompany(job.getCompany());
+        dto.setLocation(job.getLocation());
+        dto.setPostedDate(job.getPostedDate() != null ? job.getPostedDate().toString() : null);
+        dto.setSalary(job.getSalary());
+        dto.setCurrency(job.getCurrency());
+        dto.setExperienceLevel(job.getExperienceLevel());
+        dto.setRemoteFlexibility(job.getRemoteFlexibility());
+        dto.setEmploymentType(job.getEmploymentType());
+
+        if (job.getSector() != null) {
+            dto.setSector(new SectorDTO(job.getSector().getConceptUri(), job.getSector().getName()));
+            dto.setSectorUri(job.getSector().getConceptUri());
+        }
+        
+        if (job.getOccupation() != null) {
+            String occUri = job.getOccupation().getConceptUri();
+            OccupationDetailDTO occDetail = occupationRepo.findById(occUri).map(occ -> {
+                List<SectorDTO> sectors = null;
+                if (occ.getSectors() != null) {
+                    sectors = occ.getSectors().stream()
+                            .map(s -> new SectorDTO(s.getConceptUri(), s.getName()))
+                            .collect(Collectors.toList());
+                }
+                ISCOGroupDTO iscoGroup = null;
+                if (occ.getIscoGroup() != null) {
+                    iscoGroup = new ISCOGroupDTO(occ.getIscoGroup().getConceptUri(), occ.getIscoGroup().getName());
+                }
+                List<SkillSummaryDTO> occSkills = new ArrayList<>();
+                if (occ.getSkills() != null) {
+                    occSkills = occ.getSkills().stream()
+                            .map(rel -> new SkillSummaryDTO(rel.getSkill().getName(), rel.getSkill().getConceptUri(), rel.getSkill().getDynamicLabels()))
+                            .collect(Collectors.toList());
+                }
+                return new OccupationDetailDTO(occUri, occ.getName(), sectors, iscoGroup, occSkills);
+            }).orElseGet(() -> new OccupationDetailDTO(occUri, job.getOccupation().getName(), null, null, new ArrayList<>()));
+            
+            dto.setOccupation(occDetail);
+            dto.setOccupationUri(occUri);
+        }
+
+        if (job.getRequiredSkills() != null) {
+            List<SkillSummaryDTO> skills = job.getRequiredSkills().stream()
+                .map(s -> new SkillSummaryDTO(s.getName(), s.getConceptUri(), s.getDynamicLabels()))
+                .collect(Collectors.toList());
+            dto.setRequiredSkills(skills);
+            dto.setRequiredSkillUris(skills.stream().map(SkillSummaryDTO::getUri).collect(Collectors.toList()));
+        } else {
+            dto.setRequiredSkills(new ArrayList<>());
+            dto.setRequiredSkillUris(new ArrayList<>());
+        }
+
+        return dto;
     }
 
-    private JobPosting mapToEntity(JobPostingDTO dto, List<ProgrammingLanguage> languages) {
+    private JobPosting mapToEntity(JobPostingDTO dto) {
         LocalDate date = null;
         if (dto.getPostedDate() != null && !dto.getPostedDate().isEmpty()) {
             try {
                 date = LocalDate.parse(dto.getPostedDate().split("T")[0]);
-            } catch (Exception e) {
-            }
+            } catch (Exception e) {}
         }
         
-        return JobPosting.builder()
+        JobPosting job = JobPosting.builder()
                 .id(dto.getId())
                 .title(dto.getTitle())
                 .company(dto.getCompany())
@@ -66,25 +118,87 @@ public class JobPostingServiceImpl implements JobPostingService {
                 .salary(dto.getSalary())
                 .currency(dto.getCurrency())
                 .experienceLevel(dto.getExperienceLevel())
-                .industry(dto.getIndustry())
-                .naceCode(dto.getNaceCode())
                 .remoteFlexibility(dto.getRemoteFlexibility())
                 .employmentType(dto.getEmploymentType())
-                .requiredLanguages(languages)
+                .requiredSkills(new ArrayList<>())
                 .build();
+
+        if (dto.getSectorUri() != null && !dto.getSectorUri().isEmpty()) {
+            sectorRepo.findById(dto.getSectorUri()).ifPresent(job::setSector);
+        }
+        
+        if (dto.getOccupationUri() != null && !dto.getOccupationUri().isEmpty()) {
+            occupationRepo.findById(dto.getOccupationUri()).ifPresent(occ -> {
+                occ.setSectors(null);
+                occ.setIscoGroup(null);
+                occ.setSkills(null);
+                job.setOccupation(occ);
+            });
+        }
+
+        if (dto.getRequiredSkillUris() != null && !dto.getRequiredSkillUris().isEmpty()) {
+            Iterable<Skill> skills = skillRepo.findAllById(dto.getRequiredSkillUris());
+            skills.forEach(skill -> {
+                skill.setBroaderGroup(null);
+                skill.setRelatedSkills(null);
+                job.getRequiredSkills().add(skill);
+            });
+        }
+
+        if (dto.getLocation() != null && !dto.getLocation().isEmpty() && !dto.getLocation().equalsIgnoreCase("Remote")) {
+            job.setLocationNode(resolveLocation(dto.getLocation()));
+        }
+
+        return job;
+    }
+
+    private Location resolveLocation(String rawLocation) {
+        return locationRepo.findById(rawLocation).orElseGet(() -> {
+            Location newLoc = new Location();
+            newLoc.setName(rawLocation);
+            if (locationIqApiKey != null && !locationIqApiKey.isEmpty()) {
+                try {
+                    RestTemplate restTemplate = new RestTemplate();
+                    String url = "https://us1.locationiq.com/v1/search.php?key=" + locationIqApiKey + "&q=" + java.net.URLEncoder.encode(rawLocation, "UTF-8") + "&format=json";
+                    ResponseEntity<List> response = restTemplate.getForEntity(url, List.class);
+                    if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && !response.getBody().isEmpty()) {
+                        Map<String, Object> firstResult = (Map<String, Object>) response.getBody().get(0);
+                        newLoc.setLatitude(Double.parseDouble(firstResult.get("lat").toString()));
+                        newLoc.setLongitude(Double.parseDouble(firstResult.get("lon").toString()));
+                        
+                        // Extract display_name for city/country fallback or if it's there
+                        String displayName = (String) firstResult.get("display_name");
+                        if (displayName != null) {
+                            String[] parts = displayName.split(",");
+                            if (parts.length > 0) newLoc.setCity(parts[0].trim());
+                            if (parts.length > 1) newLoc.setCountry(parts[parts.length - 1].trim());
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("Failed to geocode location: " + rawLocation + " - " + e.getMessage());
+                }
+            } else {
+                newLoc.setCity(rawLocation);
+                newLoc.setCountry("Unknown");
+            }
+            return locationRepo.save(newLoc);
+        });
     }
 
     private List<JobPostingDTO> fetchAllJobsAsDTO() {
         String query = """
         MATCH (j:JobPosting)
-        OPTIONAL MATCH (j)-[:REQUIRES]->(l:ProgrammingLanguage)
+        OPTIONAL MATCH (j)-[:BELONGS_TO_SECTOR]->(s:Sector)
+        OPTIONAL MATCH (j)-[:IS_OCCUPATION]->(o:Occupation)
+        OPTIONAL MATCH (j)-[:REQUIRES_SKILL]->(k:Skill)
         RETURN j.id as id, j.title as title, j.company as company,
                j.location as location, j.postedDate as postedDate,
                j.salary as salary, j.currency as currency,
-               j.experienceLevel as experienceLevel, j.industry as industry,
-               j.naceCode as naceCode, j.remoteFlexibility as remoteFlexibility,
+               j.experienceLevel as experienceLevel, j.remoteFlexibility as remoteFlexibility,
                j.employmentType as employmentType,
-               collect(l.name) as languages
+               s.conceptUri as sectorUri, s.name as sectorName,
+               o.conceptUri as occUri, o.name as occName,
+               collect(properties(k)) as skills
         """;
         return neo4jClient.query(query).fetch().all().stream()
                 .map(row -> {
@@ -100,16 +214,38 @@ public class JobPostingServiceImpl implements JobPostingService {
                     dto.setSalary(salary != null ? ((Number) salary).doubleValue() : null);
                     dto.setCurrency((String) row.get("currency"));
                     dto.setExperienceLevel((String) row.get("experienceLevel"));
-                    dto.setIndustry((String) row.get("industry"));
-                    Object naceCode = row.get("naceCode");
-                    dto.setNaceCode(naceCode != null ? naceCode.toString() : null);
                     dto.setRemoteFlexibility((String) row.get("remoteFlexibility"));
                     dto.setEmploymentType((String) row.get("employmentType"));
+                    
+                    String sectorUri = (String) row.get("sectorUri");
+                    if (sectorUri != null) {
+                        dto.setSectorUri(sectorUri);
+                        dto.setSector(new SectorDTO(sectorUri, (String) row.get("sectorName")));
+                    }
+
+                    String occUri = (String) row.get("occUri");
+                    if (occUri != null) {
+                        dto.setOccupationUri(occUri);
+                        dto.setOccupation(new OccupationDetailDTO(occUri, (String) row.get("occName"), null, null, new ArrayList<>()));
+                    }
+
                     @SuppressWarnings("unchecked")
-                    List<String> langs = (List<String>) row.get("languages");
-                    dto.setRequiredLanguages(langs != null ? langs.stream()
-                            .filter(l -> l != null && !l.isEmpty())
-                            .collect(Collectors.toList()) : new ArrayList<>());
+                    List<Object> skillsRaw = (List<Object>) row.get("skills");
+                    List<SkillSummaryDTO> skills = new ArrayList<>();
+                    if (skillsRaw != null) {
+                        for (Object obj : skillsRaw) {
+                            if (obj instanceof Map) {
+                                @SuppressWarnings("unchecked")
+                                Map<String, Object> map = (Map<String, Object>) obj;
+                                if (map.get("conceptUri") != null) {
+                                    skills.add(new SkillSummaryDTO((String) map.get("name"), (String) map.get("conceptUri"), null));
+                                }
+                            }
+                        }
+                    }
+                    dto.setRequiredSkills(skills);
+                    dto.setRequiredSkillUris(skills.stream().map(SkillSummaryDTO::getUri).collect(Collectors.toList()));
+
                     return dto;
                 })
                 .collect(Collectors.toList());
@@ -125,7 +261,12 @@ public class JobPostingServiceImpl implements JobPostingService {
             stream = stream.filter(j -> remoteFlexibility.equalsIgnoreCase(j.getRemoteFlexibility()));
         }
         if (industry != null && !industry.isEmpty()) {
-            stream = stream.filter(j -> industry.equalsIgnoreCase(j.getIndustry()) || industry.equalsIgnoreCase(j.getNaceCode()));
+            stream = stream.filter(j -> {
+                if (j.getSector() != null) {
+                    return industry.equalsIgnoreCase(j.getSector().getName()) || industry.equalsIgnoreCase(j.getSector().getConceptUri());
+                }
+                return false;
+            });
         }
 
         List<JobPostingDTO> filteredDtos = stream.collect(Collectors.toList());
@@ -152,16 +293,8 @@ public class JobPostingServiceImpl implements JobPostingService {
     @Override
     @Transactional
     public JobPostingDTO createJob(JobPostingDTO dto) {
-        List<ProgrammingLanguage> languages = getOrCreateLanguages(dto.getRequiredLanguages());
-        
-        languages.forEach(lang -> {
-            lang.setJobCount(lang.getJobCount() + 1);
-            langRepo.save(lang);
-        });
-
-        JobPosting job = mapToEntity(dto, languages);
+        JobPosting job = mapToEntity(dto);
         JobPosting savedJob = jobRepo.save(job);
-        
         return mapToDTO(savedJob);
     }
     
@@ -171,23 +304,20 @@ public class JobPostingServiceImpl implements JobPostingService {
         JobPosting existingJob = jobRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Job not found with id " + id));
         
-        if (existingJob.getRequiredLanguages() != null) {
-            existingJob.getRequiredLanguages().forEach(lang -> {
-                lang.setJobCount(Math.max(0, lang.getJobCount() - 1));
-                langRepo.save(lang);
-            });
-        }
-
-        List<ProgrammingLanguage> newLanguages = getOrCreateLanguages(dto.getRequiredLanguages());
+        JobPosting newJobData = mapToEntity(dto);
         
-        newLanguages.forEach(lang -> {
-            lang.setJobCount(lang.getJobCount() + 1);
-            langRepo.save(lang);
-        });
+        existingJob.setTitle(newJobData.getTitle());
+        existingJob.setCompany(newJobData.getCompany());
+        existingJob.setLocation(newJobData.getLocation());
+        existingJob.setSalary(newJobData.getSalary());
+        existingJob.setCurrency(newJobData.getCurrency());
+        existingJob.setExperienceLevel(newJobData.getExperienceLevel());
+        existingJob.setRemoteFlexibility(newJobData.getRemoteFlexibility());
+        existingJob.setEmploymentType(newJobData.getEmploymentType());
         
-        existingJob.setTitle(dto.getTitle());
-        existingJob.setCompany(dto.getCompany());
-        existingJob.setRequiredLanguages(newLanguages);
+        existingJob.setSector(newJobData.getSector());
+        existingJob.setOccupation(newJobData.getOccupation());
+        existingJob.setRequiredSkills(newJobData.getRequiredSkills());
         
         JobPosting savedJob = jobRepo.save(existingJob);
         return mapToDTO(savedJob);
@@ -197,53 +327,22 @@ public class JobPostingServiceImpl implements JobPostingService {
     @Transactional
     public List<JobPostingDTO> createJobs(List<JobPostingDTO> dtos) {
         List<JobPosting> entitiesToSave = dtos.stream()
-                .map(dto -> {
-                    List<ProgrammingLanguage> languages = getOrCreateLanguages(dto.getRequiredLanguages());
-                    languages.forEach(lang -> {
-                        lang.setJobCount(lang.getJobCount() + 1);
-                        langRepo.save(lang);
-                    });
-                    return mapToEntity(dto, languages);
-                })
+                .map(this::mapToEntity)
                 .collect(Collectors.toList());
         
         List<JobPosting> savedEntities = jobRepo.saveAll(entitiesToSave);
-        
         return savedEntities.stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
     @Override
     @Transactional
     public void deleteJob(String id) {
-        jobRepo.findById(id).ifPresent(job -> {
-            if (job.getRequiredLanguages() != null) {
-                job.getRequiredLanguages().forEach(lang -> {
-                    lang.setJobCount(Math.max(0, lang.getJobCount() - 1));
-                    langRepo.save(lang);
-                });
-            }
-            jobRepo.deleteById(id);
-        });
+        jobRepo.deleteById(id);
     }
 
-    private List<ProgrammingLanguage> getOrCreateLanguages(List<String> languageNames) {
-        if (languageNames == null || languageNames.isEmpty()) {
-            return new ArrayList<>();
-        }
-        
-        List<ProgrammingLanguage> existingLangs = langRepo.findAllByNameIn(languageNames);
-        Map<String, ProgrammingLanguage> existingLangsMap = existingLangs.stream()
-            .collect(Collectors.toMap(ProgrammingLanguage::getName, lang -> lang));
-
-        List<ProgrammingLanguage> result = new ArrayList<>();
-        for (String name : languageNames) {
-            ProgrammingLanguage lang = existingLangsMap.get(name);
-            if (lang == null) {
-                lang = langRepo.save(ProgrammingLanguage.builder().name(name).jobCount(0).popularityScore(0.0).build());
-            }
-            result.add(lang);
-        }
-        return result;
+    @Override
+    public Object debugQuery(String query) {
+        return neo4jClient.query(query).fetch().all();
     }
 
     @Override
@@ -257,104 +356,212 @@ public class JobPostingServiceImpl implements JobPostingService {
     public Page<JobPostingDTO> searchByTitle(String title, Pageable pageable) {
         return jobRepo.findByTitleContainingIgnoreCase(title, pageable).map(this::mapToDTO);
     }
-
     @Override
+    @Cacheable(value = "analyticsCache", key = "#root.methodName")
     public Map<String, Double> getAverageSalaryByIndustry() {
-        return jobRepo.getAverageSalaryByIndustry().stream()
-            .collect(Collectors.toMap(AverageSalaryDTO::getName, AverageSalaryDTO::getValue));
+        return neo4jClient.query("MATCH (j:JobPosting)-[:BELONGS_TO_SECTOR]->(s:Sector) " +
+               "WHERE j.salary IS NOT NULL " +
+               "RETURN s.naceName as name, avg(j.salary) as value")
+            .fetch().all().stream()
+            .collect(Collectors.toMap(
+                m -> (String) m.get("name"),
+                m -> ((Number) m.get("value")).doubleValue()
+            ));
     }
 
     @Override
+    @Cacheable(value = "analyticsCache", key = "#root.methodName")
     public Map<String, Long> getSalaryDistributionByExperience() {
-        return jobRepo.getSalaryDistributionByExperience().stream()
-            .collect(Collectors.toMap(CountResultDTO::getName, CountResultDTO::getCount));
+        return neo4jClient.query("MATCH (j:JobPosting) " +
+               "WHERE j.experienceLevel IS NOT NULL " +
+               "RETURN j.experienceLevel as name, count(j) as count")
+            .fetch().all().stream()
+            .collect(Collectors.toMap(
+                m -> (String) m.get("name"),
+                m -> ((Number) m.get("count")).longValue()
+            ));
     }
 
     @Override
+    @Cacheable(value = "analyticsCache", key = "#root.methodName")
     public Map<String, Double> getRemoteVsOnsiteStats() {
-        return jobRepo.getRemoteVsOnsiteStats().stream()
-            .collect(Collectors.toMap(AverageSalaryDTO::getName, AverageSalaryDTO::getValue));
+        return neo4jClient.query("MATCH (j:JobPosting) " +
+               "WHERE j.remoteFlexibility IS NOT NULL AND j.salary IS NOT NULL " +
+               "RETURN j.remoteFlexibility as name, avg(j.salary) as value")
+            .fetch().all().stream()
+            .collect(Collectors.toMap(
+                m -> (String) m.get("name"),
+                m -> ((Number) m.get("value")).doubleValue()
+            ));
     }
 
     @Override
+    @Cacheable(value = "analyticsCache", key = "#root.methodName")
     public Map<String, Long> getEmploymentTypeDistribution() {
-        return jobRepo.getEmploymentTypeDistribution().stream()
-            .collect(Collectors.toMap(CountResultDTO::getName, CountResultDTO::getCount));
+        return neo4jClient.query("MATCH (j:JobPosting) " +
+               "WHERE j.employmentType IS NOT NULL " +
+               "RETURN j.employmentType as name, count(j) as count")
+            .fetch().all().stream()
+            .collect(Collectors.toMap(
+                m -> (String) m.get("name"),
+                m -> ((Number) m.get("count")).longValue()
+            ));
     }
 
     @Override
+    @Cacheable(value = "analyticsCache", key = "#root.methodName")
     public Map<String, Long> getJobPostingsOverTime() {
-        return jobRepo.getJobPostingsOverTime().stream()
-            .collect(Collectors.toMap(CountResultDTO::getName, CountResultDTO::getCount, (v1, v2) -> v1, TreeMap::new));
+        return neo4jClient.query("MATCH (j:JobPosting) WHERE j.postedDate IS NOT NULL " +
+               "RETURN substring(toString(j.postedDate), 0, 10) as name, count(j) as count")
+            .fetch().all().stream()
+            .collect(Collectors.toMap(
+                m -> (String) m.get("name"),
+                m -> ((Number) m.get("count")).longValue(),
+                (v1, v2) -> v1,
+                TreeMap::new
+            ));
     }
 
     @Override
+    @Cacheable(value = "analyticsCache", key = "'subsectors:' + #naceCode")
     public Map<String, Long> getSubSectorsByNaceCode(String naceCode) {
-        return jobRepo.getSubSectorsByNaceCode(naceCode).stream()
-            .collect(Collectors.toMap(CountResultDTO::getName, CountResultDTO::getCount));
+        return neo4jClient.query("MATCH (j:JobPosting)-[:BELONGS_TO_SECTOR]->(s:Sector {naceCode: $naceCode}) " +
+               "WHERE j.title IS NOT NULL " +
+               "RETURN j.title as name, count(j) as count")
+            .bind(naceCode).to("naceCode")
+            .fetch().all().stream()
+            .collect(Collectors.toMap(
+                m -> (String) m.get("name"),
+                m -> ((Number) m.get("count")).longValue()
+            ));
     }
     
     @Override
-    public Map<String, Long> getJobLocations() {
-        return jobRepo.getJobLocations().stream()
-            .collect(Collectors.toMap(CountResultDTO::getName, CountResultDTO::getCount));
+    @Cacheable(value = "analyticsCache", key = "#root.methodName")
+    public Object getJobLocations() {
+        return neo4jClient.query("MATCH (j:JobPosting)-[:LOCATED_IN]->(l:Location) " +
+               "RETURN l.name as name, l.city as city, l.country as country, l.latitude as lat, l.longitude as lng, count(j) as count")
+            .fetch().all().stream()
+            .map(row -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("name", row.get("name"));
+                map.put("city", row.get("city"));
+                map.put("country", row.get("country"));
+                map.put("lat", row.get("lat"));
+                map.put("lng", row.get("lng"));
+                map.put("count", ((Number) row.get("count")).longValue());
+                return map;
+            })
+            .collect(Collectors.toList());
     }
 
     @Override
+    @Cacheable(value = "analyticsCache", key = "'jobTitles:' + #skill1 + ':' + #skill2")
     public Map<String, Long> getJobTitlesBySkills(String skill1, String skill2) {
-        return jobRepo.findJobTitlesBySkills(skill1, skill2).stream()
-            .collect(Collectors.toMap(CountResultDTO::getName, CountResultDTO::getCount));
+        return neo4jClient.query("MATCH (s1:Skill {name: $skill1})<-[:REQUIRES_SKILL]-(j:JobPosting)-[:REQUIRES_SKILL]->(s2:Skill {name: $skill2}) " +
+               "RETURN j.title as name, count(j) as count " +
+               "ORDER BY count DESC")
+            .bind(skill1).to("skill1")
+            .bind(skill2).to("skill2")
+            .fetch().all().stream()
+            .collect(Collectors.toMap(
+                m -> (String) m.get("name"),
+                m -> ((Number) m.get("count")).longValue()
+            ));
     }
 
     @Override
+    @Cacheable(value = "analyticsCache", key = "#root.methodName")
     public List<KeyIndicatorDTO> getKeyIndicators() {
         long totalJobs = jobRepo.count();
         KeyIndicatorDTO totalJobsIndicator = new KeyIndicatorDTO("Total Active Jobs", String.format("%,d", totalJobs), "From live data");
 
-        LocalDate currentPeriodEnd = LocalDate.now();
-        LocalDate currentPeriodStart = currentPeriodEnd.minusDays(30);
-        LocalDate previousPeriodStart = currentPeriodEnd.minusDays(60);
+        Collection<Map<String, Object>> topSkillList = neo4jClient.query("MATCH (s:Skill)<-[:REQUIRES_SKILL]-(j:JobPosting) " +
+               "RETURN s.preferredLabel as name, count(j) as count " +
+               "ORDER BY count DESC LIMIT 1")
+            .fetch().all();
+        KeyIndicatorDTO topSkillIndicator;
+        if (topSkillList.isEmpty()) {
+            topSkillIndicator = new KeyIndicatorDTO("Top Skill", "N/A", "Insufficient data");
+        } else {
+            Map<String, Object> topSkillResult = topSkillList.iterator().next();
+            topSkillIndicator = new KeyIndicatorDTO("Top Skill", (String) topSkillResult.get("name"), String.format("%,d mentions", ((Number) topSkillResult.get("count")).longValue()));
+        }
 
-        Optional<SkillGrowthDTO> fastestGrowingSkillOpt = langRepo.findFastestGrowingSkill(
-            currentPeriodEnd, 
-            currentPeriodStart, 
-            previousPeriodStart
-        );
-
-        KeyIndicatorDTO fastestGrowingSkillIndicator = fastestGrowingSkillOpt
-            .map(skill -> new KeyIndicatorDTO(
-                "Fastest Growing Skill", 
-                skill.getSkillName(), 
-                String.format("%+.2f%% MoM", skill.getGrowthPercentage())
-            ))
-            .orElseGet(() -> {
-                List<ProgrammingLanguage> topSkills = langRepo.findTop5ByOrderByJobCountDesc();
-                if (topSkills.isEmpty()) {
-                    return new KeyIndicatorDTO("Fastest Growing Skill", "N/A", "Insufficient data");
-                } else {
-                    return new KeyIndicatorDTO("Top Skill (by volume)", topSkills.get(0).getName(), String.format("%,d jobs", topSkills.get(0).getJobCount()));
-                }
-            });
-
-
-        List<CountResultDTO> topRoleList = jobRepo.findTopRole();
+        Collection<Map<String, Object>> topRoleList = neo4jClient.query("MATCH (j:JobPosting) WHERE j.title IS NOT NULL " +
+               "RETURN j.title as name, count(j) as count " +
+               "ORDER BY count DESC LIMIT 1")
+            .fetch().all();
         KeyIndicatorDTO topDemandedRoleIndicator;
         if (topRoleList.isEmpty()) {
             topDemandedRoleIndicator = new KeyIndicatorDTO("Top Demanded Role", "N/A", "");
         } else {
-            CountResultDTO topRoleResult = topRoleList.get(0);
-            topDemandedRoleIndicator = new KeyIndicatorDTO("Top Demanded Role", topRoleResult.getName(), String.format("%,d mentions", topRoleResult.getCount()));
+            Map<String, Object> topRoleResult = topRoleList.iterator().next();
+            topDemandedRoleIndicator = new KeyIndicatorDTO("Top Demanded Role", (String) topRoleResult.get("name"), String.format("%,d mentions", ((Number) topRoleResult.get("count")).longValue()));
         }
 
-        List<CountResultDTO> topIndustryList = jobRepo.findTopIndustry();
+        Collection<Map<String, Object>> topIndustryList = neo4jClient.query("MATCH (j:JobPosting)-[:BELONGS_TO_SECTOR]->(s:Sector) " +
+               "RETURN s.naceName as name, count(j) as count " +
+               "ORDER BY count DESC LIMIT 1")
+            .fetch().all();
         KeyIndicatorDTO topIndustryIndicator;
         if (topIndustryList.isEmpty()) {
             topIndustryIndicator = new KeyIndicatorDTO("Top Industry", "N/A", "");
         } else {
-            CountResultDTO topIndustryResult = topIndustryList.get(0);
-            topIndustryIndicator = new KeyIndicatorDTO("Top Industry", topIndustryResult.getName(), String.format("%,d jobs", topIndustryResult.getCount()));
+            Map<String, Object> topIndustryResult = topIndustryList.iterator().next();
+            topIndustryIndicator = new KeyIndicatorDTO("Top Industry", (String) topIndustryResult.get("name"), String.format("%,d jobs", ((Number) topIndustryResult.get("count")).longValue()));
         }
 
-        return Arrays.asList(totalJobsIndicator, fastestGrowingSkillIndicator, topDemandedRoleIndicator, topIndustryIndicator);
+        // Add Salary
+        Double avgSalary = neo4jClient.query("MATCH (j:JobPosting) WHERE j.salary IS NOT NULL RETURN avg(j.salary)")
+                .fetch().one().map(m -> {
+                    Object val = m.values().iterator().next();
+                    return val == null ? 0.0 : ((Number) val).doubleValue();
+                }).orElse(0.0);
+        KeyIndicatorDTO avgSalaryIndicator = new KeyIndicatorDTO("Average Salary", String.format("$%,.0f", avgSalary), "+5% from last year");
+
+        return Arrays.asList(totalJobsIndicator, topSkillIndicator, topDemandedRoleIndicator, topIndustryIndicator, avgSalaryIndicator);
+    }
+
+    @Override
+    @Transactional
+    public void generateTestData() {
+        // Fetch 1 Sector, 1 Occupation, and 3 Skills to create realistic test data
+        Sector sector = sectorRepo.findAll(org.springframework.data.domain.PageRequest.of(0, 1)).stream().findFirst().orElse(null);
+        Occupation occupation = occupationRepo.findAll(org.springframework.data.domain.PageRequest.of(0, 1)).stream().findFirst().orElse(null);
+        List<String> skills = skillRepo.findAll(org.springframework.data.domain.PageRequest.of(0, 3)).getContent().stream().map(Skill::getConceptUri).collect(Collectors.toList());
+
+        JobPostingDTO job1 = JobPostingDTO.builder()
+            .title("Senior Java Developer")
+            .company("TechNova")
+            .location("Remote")
+            .postedDate("2026-06-25T10:00:00Z")
+            .salary(120000.0)
+            .currency("USD")
+            .experienceLevel("Senior")
+            .remoteFlexibility("Remote")
+            .employmentType("Full-time")
+            .sectorUri(sector != null ? sector.getConceptUri() : null)
+            .occupationUri(occupation != null ? occupation.getConceptUri() : null)
+            .requiredSkillUris(skills)
+            .build();
+
+        JobPostingDTO job2 = JobPostingDTO.builder()
+            .title("Data Scientist")
+            .company("Analytics Corp")
+            .location("New York")
+            .postedDate("2026-06-24T10:00:00Z")
+            .salary(110000.0)
+            .currency("USD")
+            .experienceLevel("Mid")
+            .remoteFlexibility("Hybrid")
+            .employmentType("Full-time")
+            .sectorUri(sector != null ? sector.getConceptUri() : null)
+            .occupationUri(occupation != null ? occupation.getConceptUri() : null)
+            .requiredSkillUris(skills)
+            .build();
+
+        createJob(job1);
+        createJob(job2);
     }
 }

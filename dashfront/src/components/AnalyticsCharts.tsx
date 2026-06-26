@@ -23,6 +23,7 @@ import {EmploymentTypeChart} from "./recharts/EmploymentTypeChart";
 import {JobsByExperienceChart} from "./recharts/JobsByExperienceChart";
 import GenericDynamicChart from "./recharts/GenericDynamicChart";
 import {useDragScroll} from "../utils/useDragScroll";
+import SkillChart from "./SkillChart";
 
 const initialCharts = [
     { id: 'timeSeries', title: 'Postings Over Time', type: 'line', fullWidth: true },
@@ -30,6 +31,7 @@ const initialCharts = [
     { id: 'remoteVsOnsite', title: 'Remote vs Onsite Avg Salary', type: 'bar', fullWidth: true },
     { id: 'employmentType', title: 'Employment Type Breakdown', type: 'pie/bar', fullWidth: true },
     { id: 'jobsByExperience', title: 'Job Postings by Experience Level', type: 'pie/bar', fullWidth: true },
+    { id: 'topSkills', title: 'Most In-Demand Skills', type: 'bar', fullWidth: true },
 ];
 
 const dropAnimationConfig = {
@@ -148,6 +150,7 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
             if (chartId === 'remoteVsOnsite') { finalData = analyticsData.remoteVsOnsite; finalCategory = "Salary & Compensation"; }
             if (chartId === 'employmentType') { finalData = analyticsData.employmentType; finalCategory = "Number of Jobs"; }
             if (chartId === 'jobsByExperience') { finalData = analyticsData.jobsByExperience; finalCategory = "Number of Jobs"; }
+            if (chartId === 'topSkills') { finalData = analyticsData.topSkills; finalCategory = "Skills"; }
         }
 
         if (!chartToSave || !finalData) return;
@@ -238,6 +241,8 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
                         unit={chartUnits.jobsByExperience}
                     />
                 );
+            case 'topSkills':
+                return <SkillChart skills={analyticsData.topSkills} />;
             default:
                 return null;
         }

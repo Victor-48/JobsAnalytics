@@ -40,7 +40,7 @@ export default function Register() {
     setErrorMsg(null);
     try {
         const response = await registerApi(data);
-        login(response.token, response.role as any);
+        login(response.role as any);
         navigate('/?new_user=true');
     } catch (err: any) {
         setErrorMsg(err.response?.data?.error || "An error occurred during registration.");

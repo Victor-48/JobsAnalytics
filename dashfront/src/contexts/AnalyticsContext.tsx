@@ -5,6 +5,7 @@ import {
     fetchSalaryByExperience,
     fetchRemoteVsOnsiteStats,
     fetchEmploymentTypeDistribution,
+    fetchTopSkills
 } from '../api/jobApi';
 import { NACE_SECTORS } from '../pages/AddJob';
 
@@ -13,6 +14,7 @@ interface AnalyticsData {
     jobsByExperience: any[];
     remoteVsOnsite: any[];
     employmentType: any[];
+    topSkills: any[];
 }
 
 interface AnalyticsContextType {
@@ -52,11 +54,17 @@ export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
         queryFn: fetchEmploymentTypeDistribution,
     });
 
+    const { data: topSkillsData, isLoading: isLoadingSkills } = useQuery({
+        queryKey: ['topSkills'],
+        queryFn: fetchTopSkills,
+    });
+
     const [formattedData, setFormattedData] = useState<AnalyticsData>({
         salaryByIndustry: [],
         jobsByExperience: [],
         remoteVsOnsite: [],
         employmentType: [],
+        topSkills: [],
     });
 
     useEffect(() => {
@@ -73,13 +81,14 @@ export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
             const jobsByExperience = jobsByExperienceData ? Object.keys(jobsByExperienceData).map(key => ({ name: key, count: jobsByExperienceData[key] })) : [];
             const remoteVsOnsite = remoteVsOnsiteData ? Object.keys(remoteVsOnsiteData).map(key => ({ name: key, salary: Math.round(remoteVsOnsiteData[key]) })) : [];
             const employmentType = employmentTypeData ? Object.keys(employmentTypeData).map(key => ({ name: key, count: employmentTypeData[key] })) : [];
+            const topSkills = topSkillsData || [];
 
-            setFormattedData({ salaryByIndustry, jobsByExperience, remoteVsOnsite, employmentType });
+            setFormattedData({ salaryByIndustry, jobsByExperience, remoteVsOnsite, employmentType, topSkills });
         };
         formatData();
-    }, [salaryByIndustryData, jobsByExperienceData, remoteVsOnsiteData, employmentTypeData]);
+    }, [salaryByIndustryData, jobsByExperienceData, remoteVsOnsiteData, employmentTypeData, topSkillsData]);
 
-    const isLoading = isLoadingSalary || isLoadingExperience || isLoadingRemote || isLoadingEmployment;
+    const isLoading = isLoadingSalary || isLoadingExperience || isLoadingRemote || isLoadingEmployment || isLoadingSkills;
 
     const value = {
         data: formattedData,

@@ -14,7 +14,9 @@ import lombok.NoArgsConstructor;
 public class Sector {
     
     @Id
+    @org.springframework.data.neo4j.core.schema.Property("naceCode")
     private String conceptUri;
 
+    @org.springframework.data.neo4j.core.schema.Property("naceName")
     private String name;
 }

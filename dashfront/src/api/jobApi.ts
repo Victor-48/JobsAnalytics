@@ -1,5 +1,4 @@
 import api from "./axiosconfig";
-import type { ProgrammingLanguage } from "../types/Language";
 import type { JobPosting } from "../types/Job";
 import type { AxiosResponse } from "axios";
 
@@ -40,8 +39,8 @@ export interface GraphData {
     links: GraphLink[];
 }
 
-export async function fetchTopLanguages(): Promise<ProgrammingLanguage[]> {
-    const response: AxiosResponse<ProgrammingLanguage[]> = await api.get("/languages/top");
+export async function fetchTopSkills(): Promise<{name: string, count: number}[]> {
+    const response: AxiosResponse<{name: string, count: number}[]> = await api.get("/esco/skills/top");
     return response.data;
 }
 
@@ -81,7 +80,7 @@ export async function fetchSkillCoOccurrence(startDate?: string, endDate?: strin
     if (startDate) params.startDate = startDate;
     if (endDate) params.endDate = endDate;
 
-    const response: AxiosResponse<GraphData> = await api.get("/languages/co-occurrence", { params });
+    const response: AxiosResponse<GraphData> = await api.get("/esco/skills/co-occurrence", { params });
     return response.data;
 }
 
@@ -89,7 +88,7 @@ export async function fetchSkillCoOccurrenceTrends(referenceDate?: string): Prom
     const params: Record<string, string> = {};
     if (referenceDate) params.referenceDate = referenceDate;
 
-    const response: AxiosResponse<GraphData> = await api.get("/languages/co-occurrence-trends", { params });
+    const response: AxiosResponse<GraphData> = await api.get("/esco/skills/co-occurrence-trends", { params });
     return response.data;
 }
 
@@ -130,8 +129,8 @@ export async function fetchSubSectorsByNaceCode(naceCode: string): Promise<Recor
     return response.data;
 }
 
-export async function fetchJobLocations(): Promise<Record<string, number>> {
-    const response: AxiosResponse<Record<string, number>> = await api.get("/jobs/stats/locations");
+export async function fetchJobLocations(): Promise<any[]> {
+    const response: AxiosResponse<any[]> = await api.get("/jobs/stats/locations");
     return response.data;
 }
 

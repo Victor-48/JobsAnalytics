@@ -2,7 +2,7 @@ import api from "./axiosconfig";
 import type { AxiosResponse } from "axios";
 
 export interface AuthResponse {
-    token: string;
+    token?: string | null;
     email: string;
     fullName: string;
     role: string;

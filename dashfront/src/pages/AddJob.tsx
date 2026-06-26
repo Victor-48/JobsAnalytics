@@ -59,7 +59,7 @@ const jobSchema = z.object({
   
   employmentType: z.enum(["Full-time", "Part-time", "Contract", "Freelance"]),
   
-  requiredLanguagesString: z.string()
+  requiredSkillUrisString: z.string()
     .regex(/^[a-zA-Z0-9\s\-_.,#+]+$/, "Only letters, numbers, spaces, and - _ . , # + are allowed")
     .optional()
 });
@@ -120,7 +120,7 @@ export default function AddJob() {
       experienceLevel: "Mid",
       remoteFlexibility: "Hybrid",
       employmentType: "Full-time",
-      requiredLanguagesString: ""
+      requiredSkillUrisString: ""
     }
   });
 
@@ -143,7 +143,7 @@ export default function AddJob() {
             experienceLevel: job.experienceLevel || "Mid",
             remoteFlexibility: job.remoteFlexibility || "Hybrid",
             employmentType: job.employmentType || "Full-time",
-            requiredLanguagesString: job.requiredLanguages ? job.requiredLanguages.join(', ') : ""
+            requiredSkillUrisString: job.requiredSkillUris ? job.requiredSkillUris.join(', ') : ""
           });
         })
         .catch(err => {
@@ -159,8 +159,8 @@ export default function AddJob() {
   const onSubmit: SubmitHandler<JobFormValues> = async (data) => {
     setSubmitError(null);
     try {
-      const languagesArray = data.requiredLanguagesString
-        ? data.requiredLanguagesString.split(',').map((s) => s.trim()).filter(Boolean)
+      const skillsArray = data.requiredSkillUrisString
+        ? data.requiredSkillUrisString.split(',').map((s) => s.trim()).filter(Boolean)
         : [];
 
       const selectedNace = NACE_SECTORS.find(n => n.code === data.naceCode);
@@ -177,7 +177,7 @@ export default function AddJob() {
         industry: selectedNace ? selectedNace.description : "Unknown", // Backward compat
         remoteFlexibility: data.remoteFlexibility,
         employmentType: data.employmentType,
-        requiredLanguages: languagesArray
+        requiredSkillUris: skillsArray
       };
       
       if (isEditing && id) {
@@ -423,10 +423,10 @@ export default function AddJob() {
           <div className="mt-4">
             <FormField
               control={form.control}
-              name="requiredLanguagesString"
-              render={({ field }: { field: ControllerRenderProps<JobFormValues, "requiredLanguagesString"> }) => (
+              name="requiredSkillUrisString"
+              render={({ field }: { field: ControllerRenderProps<JobFormValues, "requiredSkillUrisString"> }) => (
                 <FormItem>
-                  <FormLabel>Required Languages</FormLabel>
+                  <FormLabel>Required Skills (Comma separated URIs or Exact Names)</FormLabel>
                   <FormControl>
                     <Input placeholder="Java, Python, SQL" {...field} value={field.value || ""} className="bg-background text-foreground border-input" />
                   </FormControl>

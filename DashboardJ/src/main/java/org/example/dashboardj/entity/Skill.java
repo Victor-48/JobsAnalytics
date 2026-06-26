@@ -21,6 +21,7 @@ public class Skill {
     @Id
     private String conceptUri;
 
+    @org.springframework.data.neo4j.core.schema.Property("preferredLabel")
     private String name;
 
     private String skillType;

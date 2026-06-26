@@ -5,6 +5,7 @@ import Jobs from "./pages/Jobs";
 import AddJob from "./pages/AddJob";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import EscoExplorer from "./pages/EscoExplorer";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { TutorialProvider } from "./contexts/TutorialContext";
@@ -26,6 +27,7 @@ function AppContent() {
                     <Route path="/jobs" element={<Jobs />} />
                     <Route path="/add-job" element={<AddJob />} />
                     <Route path="/edit-job/:id" element={<AddJob />} />
+                    <Route path="/esco-explorer" element={<EscoExplorer />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
                 </Routes>
@@ -100,6 +102,7 @@ function Navigation() {
         <nav className="p-4 bg-card border-b border-border flex justify-between items-center transition-colors z-50 relative">
             <div className="flex gap-6 items-center">
                 <Link id="dashboard-page-link" to="/" className="font-bold text-foreground hover:text-primary transition-colors">Dashboard</Link>
+                <Link id="esco-page-link" to="/esco-explorer" className="font-bold text-foreground hover:text-primary transition-colors">ESCO Explorer</Link>
                 {role !== 'GUEST' && (
                     <>
                         <Link id="jobs-page-link" to="/jobs" className="font-bold text-foreground hover:text-primary transition-colors">Jobs</Link>

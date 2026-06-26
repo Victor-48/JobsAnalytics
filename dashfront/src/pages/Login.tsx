@@ -33,7 +33,7 @@ export default function Login() {
     setErrorMsg(null);
     try {
         const response = await loginApi(data);
-        login(response.token, response.role as any);
+        login(response.role as any);
         navigate('/');
     } catch (err: any) {
         setErrorMsg(err.response?.data?.error || "An error occurred during login.");

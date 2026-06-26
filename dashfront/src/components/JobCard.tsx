@@ -31,9 +31,9 @@ export default function JobCard({ job }: Props) {
                             {job.remoteFlexibility}
                         </span>
                     )}
-                    {job.industry && (
+                    {job.sector && (
                         <span className="px-2 py-1 bg-secondary text-secondary-foreground text-xs rounded-full font-semibold">
-                            {job.industry}
+                            {job.sector.name}
                         </span>
                     )}
                     {job.employmentType && (
@@ -56,12 +56,12 @@ export default function JobCard({ job }: Props) {
 
             <div>
                 <div className="mb-2">
-                    <strong className="text-xs text-muted-foreground uppercase tracking-wider">Required Languages:</strong>
+                    <strong className="text-xs text-muted-foreground uppercase tracking-wider">Required Skills:</strong>
                     <div className="flex flex-wrap gap-1 mt-1">
-                        {job.requiredLanguages && job.requiredLanguages.length > 0 ? (
-                            job.requiredLanguages.map(lang => (
-                                <span key={lang} className="px-2 py-1 bg-background text-muted-foreground text-xs rounded border border-border">
-                                    {lang}
+                        {job.requiredSkills && job.requiredSkills.length > 0 ? (
+                            job.requiredSkills.map(skill => (
+                                <span key={skill.uri} className="px-2 py-1 bg-background text-muted-foreground text-xs rounded border border-border">
+                                    {skill.name}
                                 </span>
                             ))
                         ) : (
@@ -70,7 +70,7 @@ export default function JobCard({ job }: Props) {
                     </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-3 border-t border-border pt-2">
-                    Posted: {new Date(job.postedDate).toLocaleDateString()}
+                    Posted: {job.postedDate ? (job.postedDate.includes('T') ? new Date(job.postedDate) : new Date(job.postedDate + "T00:00:00")).toLocaleDateString() : 'Unknown'}
                 </p>
             </div>
         </div>

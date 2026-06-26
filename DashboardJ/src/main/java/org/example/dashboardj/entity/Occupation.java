@@ -19,6 +19,7 @@ public class Occupation {
     @Id
     private String conceptUri;
 
+    @org.springframework.data.neo4j.core.schema.Property("preferredLabel")
     private String name;
 
     @Relationship(type = "WORKS_IN_SECTOR", direction = Relationship.Direction.OUTGOING)

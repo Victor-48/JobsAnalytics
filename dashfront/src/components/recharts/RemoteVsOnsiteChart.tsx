@@ -1,5 +1,6 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import CustomTooltip from "../CustomTooltip";
 
 interface Props {
     data: any[];
@@ -15,8 +16,7 @@ export const RemoteVsOnsiteChart = ({ data }: Props) => {
                 <XAxis dataKey="name" tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dy={10} />
                 <YAxis tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dx={-10} />
                 <Tooltip
-                    formatter={(value: any) => [`$${value}`, 'Avg Salary']}
-                    contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    content={<CustomTooltip formatter={(value: any) => [`$${value}`, 'Avg Salary']} />}
                 />
                 <Bar dataKey="salary" fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} barSize={40} />
             </BarChart>

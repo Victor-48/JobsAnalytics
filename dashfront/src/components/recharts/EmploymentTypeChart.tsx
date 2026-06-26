@@ -1,6 +1,7 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, CartesianGrid } from "recharts";
 import { formatValue, calculateTotal } from "../../utils/chartUtils";
+import CustomTooltip from "../CustomTooltip";
 
 interface Props {
     data: any[];
@@ -31,8 +32,7 @@ export const EmploymentTypeChart = ({ data, displayType = 'pie', unit = 'percent
                     {data.map((_, index) => <Cell key={`cell-${index}`} fill={getThemeColor(index)} />)}
                 </Pie>
                 <Tooltip
-                    formatter={(value: any) => [formatValue(value, total, unit), 'Jobs']}
-                    contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))' }}
+                    content={<CustomTooltip formatter={(value: any) => [formatValue(value, total, unit), 'Jobs']} />}
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
             </PieChart>
@@ -44,8 +44,7 @@ export const EmploymentTypeChart = ({ data, displayType = 'pie', unit = 'percent
                 <XAxis type="number" tickFormatter={(v) => formatValue(v, total, unit).toString()} tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} />
                 <YAxis type="category" dataKey="name" width={80} tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} />
                 <Tooltip
-                    formatter={(value: any) => [formatValue(value, total, unit), 'Jobs']}
-                    contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))' }}
+                    content={<CustomTooltip formatter={(value: any) => [formatValue(value, total, unit), 'Jobs']} />}
                 />
                 <Bar dataKey="count" fill="hsl(var(--chart-4))" radius={[0, 4, 4, 0]} barSize={24} />
             </BarChart>

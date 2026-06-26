@@ -29,49 +29,49 @@ public interface JobPostingRepository extends Neo4jRepository<JobPosting, String
     @Query("MATCH (j:JobPosting)-[:BELONGS_TO_SECTOR]->(s:Sector) " +
            "RETURN s.name as name, count(j) as count " +
            "ORDER BY count DESC LIMIT 1")
-    List<CountResultDTO> findTopIndustry();
+    List<Map<String, Object>> findTopIndustry();
 
     @Query("MATCH (j:JobPosting) WHERE j.title IS NOT NULL " +
            "RETURN j.title as name, count(j) as count " +
            "ORDER BY count DESC LIMIT 1")
-    List<CountResultDTO> findTopRole();
+    List<Map<String, Object>> findTopRole();
 
     @Query("MATCH (j:JobPosting)-[:BELONGS_TO_SECTOR]->(s:Sector) " +
            "WHERE j.salary IS NOT NULL " +
            "RETURN s.conceptUri as name, avg(j.salary) as value")
-    List<AverageSalaryDTO> getAverageSalaryByIndustry();
+    List<Map<String, Object>> getAverageSalaryByIndustry();
 
     @Query("MATCH (j:JobPosting) " +
            "WHERE j.experienceLevel IS NOT NULL " +
            "RETURN j.experienceLevel as name, count(j) as count")
-    List<CountResultDTO> getSalaryDistributionByExperience();
+    List<Map<String, Object>> getSalaryDistributionByExperience();
 
     @Query("MATCH (j:JobPosting) " +
            "WHERE j.remoteFlexibility IS NOT NULL AND j.salary IS NOT NULL " +
            "RETURN j.remoteFlexibility as name, avg(j.salary) as value")
-    List<AverageSalaryDTO> getRemoteVsOnsiteStats();
+    List<Map<String, Object>> getRemoteVsOnsiteStats();
 
     @Query("MATCH (j:JobPosting) " +
            "WHERE j.employmentType IS NOT NULL " +
            "RETURN j.employmentType as name, count(j) as count")
-    List<CountResultDTO> getEmploymentTypeDistribution();
+    List<Map<String, Object>> getEmploymentTypeDistribution();
 
     @Query("MATCH (j:JobPosting) WHERE j.postedDate IS NOT NULL " +
             "RETURN substring(toString(j.postedDate), 0, 10) as name, count(j) as count")
-    List<CountResultDTO> getJobPostingsOverTime();
+    List<Map<String, Object>> getJobPostingsOverTime();
 
-    @Query("MATCH (j:JobPosting)-[:BELONGS_TO_SECTOR]->(s:Sector {uri: $naceCode}) " +
+    @Query("MATCH (j:JobPosting)-[:BELONGS_TO_SECTOR]->(s:Sector {naceCode: $naceCode}) " +
            "WHERE j.title IS NOT NULL " +
            "RETURN j.title as name, count(j) as count")
-    List<CountResultDTO> getSubSectorsByNaceCode(@Param("naceCode") String naceCode);
+    List<Map<String, Object>> getSubSectorsByNaceCode(@Param("naceCode") String naceCode);
 
     @Query("MATCH (j:JobPosting) " +
            "WHERE j.location IS NOT NULL AND j.location <> '' " +
            "RETURN j.location as name, count(j) as count")
-    List<CountResultDTO> getJobLocations();
+    List<Map<String, Object>> getJobLocations();
 
     @Query("MATCH (s1:Skill {name: $skill1})<-[:REQUIRES_SKILL]-(j:JobPosting)-[:REQUIRES_SKILL]->(s2:Skill {name: $skill2}) " +
            "RETURN j.title as name, count(j) as count " +
            "ORDER BY count DESC")
-    List<CountResultDTO> findJobTitlesBySkills(@Param("skill1") String skill1, @Param("skill2") String skill2);
+    List<Map<String, Object>> findJobTitlesBySkills(@Param("skill1") String skill1, @Param("skill2") String skill2);
 }

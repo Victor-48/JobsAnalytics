@@ -17,7 +17,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString(exclude = {"requiredSkills", "sector", "occupation"})
+@ToString(exclude = {"requiredSkills", "sector", "occupation", "locationNode"})
 public class JobPosting {
     @Id
     @GeneratedValue(UUIDStringGenerator.class)
@@ -26,6 +26,9 @@ public class JobPosting {
     private String title;
     private String company;
     private String location;
+
+    @Relationship(type = "LOCATED_IN", direction = Relationship.Direction.OUTGOING)
+    private Location locationNode;
 
     private LocalDate postedDate;
 
