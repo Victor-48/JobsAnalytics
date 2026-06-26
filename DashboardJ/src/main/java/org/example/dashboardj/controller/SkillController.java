@@ -32,7 +32,7 @@ public class SkillController {
     }
 
     @GetMapping("/top")
-    public ResponseEntity<List<CountResultDTO>> getTopSkills() {
+    public ResponseEntity<List<java.util.Map<String, Object>>> getTopSkills() {
         return ResponseEntity.ok(service.getTopSkills());
     }
 

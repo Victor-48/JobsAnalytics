@@ -42,7 +42,7 @@ export default function Dashboard() {
     const navigate = useNavigate();
     const { startTutorial } = useTutorial();
     const { role } = useAuth();
-    const [locations, setLocations] = useState<Record<string, number>>({});
+    const [locations, setLocations] = useState<any[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [loadedSavedChart, setLoadedSavedChart] = useState<SavedChart | null>(null);
     const [showSavedInsights, setShowSavedInsights] = useState(true);

@@ -4,26 +4,9 @@ import 'leaflet/dist/leaflet.css';
 import L, { LatLngExpression } from 'leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 
-// --- Hardcoded Data & Helpers ---
+// --- Hardcoded Data & Helpers (Fallback if needed) ---
 const CITY_COORDINATES: Record<string, [number, number]> = {
-    'Bucuresti': [44.4268, 26.1025], 'Bucharest': [44.4268, 26.1025], 'Cluj': [46.7712, 23.6236],
-    'Timisoara': [45.7489, 21.2087], 'Iasi': [47.1585, 27.6014], 'Brasov': [45.6427, 25.5887],
-    'Constanta': [44.1598, 28.6348], 'Sibiu': [45.7983, 24.1256], 'Craiova': [44.3302, 23.7949],
-    'Oradea': [47.0465, 21.9189], 'Galati': [45.4353, 28.0080], 'Ploiesti': [44.9367, 26.0125],
-    'Remote': [45.9, 25.0], 'Romania': [45.9432, 24.9668], 'Ilfov': [44.5, 26.1], 'Iași': [47.1585, 27.6014],
-    'Brașov': [45.6427, 25.5887], 'New York': [40.7128, -74.0060], 'Seattle': [47.6062, -122.3321],
-    'London': [51.5074, -0.1278], 'San Francisco': [37.7749, -122.4194], 'Chicago': [41.8781, -87.6298],
-    'Houston': [29.7604, -95.3698], 'Los Angeles': [34.0522, -118.2437], 'Paris': [48.8566, 2.3522],
-    'Charlotte': [35.2271, -80.8431], 'Atlanta': [33.7490, -84.3880], 'Dallas': [32.7767, -96.7970],
-    'Austin': [30.2672, -97.7431], 'Boston': [42.3601, -71.0589], 'Los Gatos': [37.2222, -121.9841],
-    'Waltham': [42.3765, -71.2356], 'Cincinnati': [39.1031, -84.5120], 'Juno Beach': [26.8798, -80.0534],
-    'Midland': [43.6156, -84.2472], 'Cupertino': [37.3230, -122.0322], 'Purchase': [41.0409, -73.7151],
-    'Stockholm': [59.3293, 18.0686], 'Dearborn': [42.3223, -83.1763], 'Bentonville': [36.3729, -94.2088],
-    'Camden': [39.9259, -75.1196], 'San Diego': [32.7157, -117.1611], 'Bethesda': [38.9822, -77.0945],
-    'Menlo Park': [37.4529, -122.1817], 'Memphis': [35.1495, -90.0490], 'Aarhus': [56.1629, 10.2039],
-    'Washington': [38.9072, -77.0369], 'Mountain View': [37.3861, -122.0839], 'New Brunswick': [40.4862, -74.4518],
-    'Peoria': [40.6936, -89.5890], 'Bengaluru, India': [12.9716, 77.5946], 'Toronto, Canada': [43.6510, -79.3470],
-    'Herzliya, Israel': [32.1624, 34.8447]
+    'Remote': [45.9, 25.0], 'Romania': [45.9432, 24.9668], 'Ilfov': [44.5, 26.1]
 };
 
 const extractCityFromAdzunaLocation = (location: string): string => {
@@ -83,8 +66,8 @@ export interface MapViewState {
     zoom: number;
 }
 
-interface MapChartProps {
-    locationData: Record<string, number>;
+export interface MapChartProps {
+    locationData: any[];
     viewState: MapViewState;
     onViewChange: (state: MapViewState) => void;
     isActive: boolean;
@@ -129,27 +112,34 @@ export default function MapChart({ locationData, viewState, onViewChange, isActi
 
     useEffect(() => {
         const newMarkers: {name: string, coords: [number, number], count: number}[] = [];
-        Object.entries(locationData).forEach(([location, count]) => {
-            const extractedCity = extractCityFromAdzunaLocation(location);
-            let coords = CITY_COORDINATES[extractedCity];
-            if (!coords) {
-                 for (const [city, latlng] of Object.entries(CITY_COORDINATES)) {
-                     if (extractedCity.toLowerCase().includes(city.toLowerCase()) || location.toLowerCase().includes(city.toLowerCase())) {
-                         coords = latlng;
-                         break;
-                     }
-                 }
-            }
-            if (coords) {
-                newMarkers.push({ name: location, coords, count });
-            } else {
-                 console.warn(`Could not find coordinates for: ${location} (Extracted: ${extractedCity})`);
-            }
-        });
+        
+        if (Array.isArray(locationData)) {
+            locationData.forEach((loc) => {
+                if (loc.lat != null && loc.lng != null) {
+                    newMarkers.push({ name: loc.name || loc.city, coords: [loc.lat, loc.lng], count: loc.count });
+                } else {
+                    const extractedCity = extractCityFromAdzunaLocation(loc.name || '');
+                    let coords = CITY_COORDINATES[extractedCity];
+                    if (!coords) {
+                         for (const [city, latlng] of Object.entries(CITY_COORDINATES)) {
+                             if (extractedCity.toLowerCase().includes(city.toLowerCase()) || (loc.name || '').toLowerCase().includes(city.toLowerCase())) {
+                                 coords = latlng;
+                                 break;
+                             }
+                         }
+                    }
+                    if (coords) {
+                        newMarkers.push({ name: loc.name, coords, count: loc.count });
+                    } else {
+                         console.warn(`Could not find coordinates for: ${loc.name} (Extracted: ${extractedCity})`);
+                    }
+                }
+            });
+        }
         setMarkers(newMarkers);
     }, [locationData]);
 
-    if (!locationData || Object.keys(locationData).length === 0 || markers.length === 0) {
+    if (!locationData || locationData.length === 0 || markers.length === 0) {
         return <div className="h-full w-full min-h-[300px] flex items-center justify-center bg-muted/20 rounded-xl text-muted-foreground border border-dashed border-border">No location data to map.</div>;
     }
 

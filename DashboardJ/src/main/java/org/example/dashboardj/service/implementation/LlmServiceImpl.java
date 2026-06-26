@@ -20,7 +20,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -43,7 +42,6 @@ public class LlmServiceImpl implements LlmService {
     private String ollamaModel;
 
     private LlmAgent agent;
-    private final Map<String, Map<String, Object>> responseCache = new ConcurrentHashMap<>();
 
     @PostConstruct
     public void init() {
@@ -76,18 +74,13 @@ public class LlmServiceImpl implements LlmService {
     public Map<String, Object> processNaturalLanguageQuery(String query) {
         String cacheKey = llmProvider + ":" + query.toLowerCase().trim();
 
-        if (responseCache.containsKey(cacheKey)) {
-            System.out.println("Returning cached response for query: " + query);
-            return responseCache.get(cacheKey);
-        }
-
         List<JobPosting> allJobs = jobRepo.findAll();
         StringBuilder dbContext = new StringBuilder("Current Database State (Partial summary of existing jobs):\n");
         int count = 0;
         for (JobPosting job : allJobs) {
             if (count > 30) break;
             dbContext.append(String.format("- Title: %s, Location: %s, Salary: %s, Experience: %s, Sector: %s\n",
-                    job.getTitle(), job.getLocation(), job.getSalary(), job.getExperienceLevel(), job.getNaceCode()));
+                    job.getTitle(), job.getLocation(), job.getSalary(), job.getExperienceLevel(), job.getSector()));
             count++;
         }
 
@@ -100,7 +93,6 @@ public class LlmServiceImpl implements LlmService {
 
             if (resultMap.containsKey("chartType")) {
                 System.out.println("Agent used local database. No web search needed.");
-                responseCache.put(cacheKey, resultMap);
                 return resultMap;
             }
 
@@ -117,7 +109,6 @@ public class LlmServiceImpl implements LlmService {
                 finalJsonResponse = cleanMarkdown(finalJsonResponse);
                 
                 Map<String, Object> finalResultMap = objectMapper.readValue(finalJsonResponse, new TypeReference<>() {});
-                responseCache.put(cacheKey, finalResultMap);
                 return finalResultMap;
             }
 

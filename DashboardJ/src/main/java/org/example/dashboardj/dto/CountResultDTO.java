@@ -1,13 +1,6 @@
 package org.example.dashboardj.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class CountResultDTO {
-    private String name;
-    private Long count;
+public interface CountResultDTO {
+    String getName();
+    Long getCount();
 }
