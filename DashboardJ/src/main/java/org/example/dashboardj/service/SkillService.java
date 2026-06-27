@@ -12,6 +12,6 @@ public interface SkillService {
     Page<SkillSummaryDTO> getAllSkills(Pageable pageable);
     SkillSummaryDTO getSkillByUri(String uri);
     List<java.util.Map<String, Object>> getTopSkills();
-    org.example.dashboardj.dto.GraphDataDTO getSkillCoOccurrence();
-    org.example.dashboardj.dto.GraphDataDTO getSkillCoOccurrenceTrends();
+    org.example.dashboardj.dto.GraphDataDTO getSkillCoOccurrence(String startDate, String endDate);
+    org.example.dashboardj.dto.GraphDataDTO getSkillCoOccurrenceTrends(String referenceDate);
 }

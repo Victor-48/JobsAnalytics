@@ -23,15 +23,8 @@ interface Props {
 export default function SkillChart({ skills }: Props) {
     return (
         <div className="chart-container w-full h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                 <BarChart data={skills} margin={{ top: 5, right: 0, left: 0, bottom: 5 }}>
-                    <defs>
-                        <linearGradient id="colorJobs" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
-                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.4}/>
-                        </linearGradient>
-                    </defs>
-
                     <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="3 3" />
 
                     <XAxis
@@ -51,7 +44,8 @@ export default function SkillChart({ skills }: Props) {
 
                     <Bar
                         dataKey="count"
-                        fill="url(#colorJobs)"
+                        fill="hsl(var(--primary))"
+                        fillOpacity={0.8}
                         radius={[4, 4, 0, 0]}
                         animationDuration={300}
                         barSize={30}

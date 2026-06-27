@@ -1,9 +1,9 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { SwitchIcon, DragHandleIcon, PercentageIcon, HashIcon, FloatIcon, SaveIcon } from './Icons';
+import { SwitchIcon, DragHandleIcon, PercentageIcon, HashIcon, FloatIcon, SaveIcon, SortIcon } from './Icons';
 
-export function SortableChartCard({ chart, children, onToggleType, displayType, onToggleUnit, displayUnit, isOverlay, onToggleFloat, isFloating, onSave }: any) {
+export function SortableChartCard({ chart, children, onToggleType, displayType, onToggleUnit, displayUnit, isOverlay, onToggleFloat, isFloating, onSave, onToggleSort, sortOrder }: any) {
     const {
         attributes,
         listeners,
@@ -35,6 +35,11 @@ export function SortableChartCard({ chart, children, onToggleType, displayType, 
                     {onSave && (
                         <button id="tutorial-save-chart" onClick={onSave} className="p-1.5 text-muted-foreground hover:text-green-600 hover:bg-green-50 rounded-md transition-colors" title="Save this insight">
                             <SaveIcon />
+                        </button>
+                    )}
+                    {onToggleSort && (
+                        <button id="tutorial-sort-chart" onClick={onToggleSort} className={`p-1.5 rounded-md transition-colors ${sortOrder !== 'none' ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-secondary'}`} title={`Sort (current: ${sortOrder || 'none'})`}>
+                            <SortIcon direction={sortOrder || 'none'} />
                         </button>
                     )}
                     {onToggleFloat && (

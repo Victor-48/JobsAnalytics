@@ -15,24 +15,26 @@ import type { NodeObject } from 'force-graph';
 import type { DateRange } from "react-day-picker";
 import type { Step } from 'react-joyride';
 
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 // --- MapCard Component ---
 function MapCard({ isMaximized = false, onMaximizeToggle, locationData, viewState, onViewChange, isActive, onActiveChange }: any) {
     return (
-        <div id="map-card" className="w-full h-full bg-card p-6 rounded-2xl shadow-sm border border-border flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-foreground">Geospatial Distribution</h2>
-                <button onClick={onMaximizeToggle} className="p-1 hover:bg-muted rounded-full text-muted-foreground hover:text-foreground">
+        <Card id="map-card" className="w-full h-full flex flex-col relative overflow-hidden group">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-xl font-bold">Geospatial Distribution</CardTitle>
+                <button onClick={onMaximizeToggle} className="p-1 hover:bg-muted rounded-full text-muted-foreground hover:text-foreground transition-colors z-10 relative">
                     {isMaximized ? (
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
                     ) : (
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
                     )}
                 </button>
-            </div>
-            <div className="flex-grow min-h-[400px]">
+            </CardHeader>
+            <CardContent className="flex-grow p-0 min-h-[400px]">
                 <MapChart locationData={locationData} viewState={viewState} onViewChange={onViewChange} isActive={isActive} onActiveChange={onActiveChange} />
-            </div>
-        </div>
+            </CardContent>
+        </Card>
     );
 }
 
@@ -54,8 +56,10 @@ export default function Dashboard() {
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [isTrendMode, setTrendMode] = useState(false);
     const [viewMode, setViewMode] = useState<'grid' | 'single'>('single');
+    const [focusedChartId, setFocusedChartId] = useState<string>('timeSeries');
 
-    const tutorialSteps: Step[] = useMemo(() => [
+    const tutorialSteps: Step[] = useMemo(() => {
+        const steps: Step[] = [
         {
             target: '#kpi-indicators',
             content: 'These cards show a high-level overview of the job market, including the total number of jobs and the fastest-growing skills.',
@@ -72,9 +76,20 @@ export default function Dashboard() {
             placement: 'left',
         },
         {
-            target: '#standard-analytics-buttons',
-            content: 'Click these buttons to switch between different insights, like Salary comparisons or Postings over time. The interactive chart below will update automatically.',
-            placement: 'left',
+            target: '#tutorial-salary-btn',
+            content: focusedChartId === 'salaryByIndustry' 
+                ? 'Great! The chart updated. Click Next to continue.'
+                : 'Click this button to switch to the Salary comparisons insight. The interactive chart below will update automatically.',
+            placement: 'top',
+            spotlightClicks: true,
+            styles: {
+                buttonNext: focusedChartId !== 'salaryByIndustry' ? {
+                    backgroundColor: 'hsl(var(--muted))',
+                    color: 'hsl(var(--muted-foreground))',
+                    cursor: 'not-allowed',
+                    pointerEvents: 'none',
+                } : undefined
+            } as any
         },
         {
             target: '#tutorial-popout-chart',
@@ -89,6 +104,11 @@ export default function Dashboard() {
         {
             target: '#tutorial-save-chart',
             content: 'Click this Save icon to bookmark this specific insight. It will be stored in your Saved Insights sidebar for quick access later.',
+            placement: 'bottom',
+        },
+        {
+            target: '#tutorial-sort-chart',
+            content: 'Use this button to quickly sort the chart data in ascending or descending order to spot trends easily.',
             placement: 'bottom',
         },
         {
@@ -119,6 +139,11 @@ export default function Dashboard() {
             placement: 'left',
         },
         {
+            target: '#date',
+            content: 'Use this calendar to filter the network graph by a specific date range and see how skill demand shifts over time.',
+            placement: 'bottom',
+        },
+        {
             target: '#map-card',
             content: 'This map shows where jobs are located. Clusters represent the total number of jobs in that area. Click to zoom in.',
             placement: 'right',
@@ -128,7 +153,9 @@ export default function Dashboard() {
             content: 'Now, let\'s explore the jobs table to see the raw data.',
             placement: 'bottom',
         },
-    ], [viewMode, showSavedInsights]);
+        ];
+        return steps.map(step => ({ ...step, disableBeacon: true }));
+    }, [viewMode, showSavedInsights, focusedChartId]);
 
     const handleTutorialStart = () => {
         const firstStepTarget = document.querySelector(tutorialSteps[0].target as string);
@@ -212,7 +239,7 @@ export default function Dashboard() {
                 <SavedInsights onLoadInsight={setLoadedSavedChart} />
             </aside>
 
-            <main className={`flex-1 overflow-y-auto p-4 md:p-8 transition-all duration-300 ${showSavedInsights ? "lg:ml-72" : "ml-0"}`}>
+            <main className={`flex-1 overflow-y-auto px-6 md:px-10 py-6 md:py-8 transition-all duration-300 ${showSavedInsights ? "lg:ml-72" : "ml-0"}`}>
                 <div className="max-w-6xl mx-auto pb-20">
                     <div id="kpi-indicators"><KeyIndicators /></div>
                     <div className="w-full mb-8">
@@ -220,6 +247,8 @@ export default function Dashboard() {
                             initialLoadedChart={loadedSavedChart}
                             viewMode={viewMode}
                             onViewModeChange={setViewMode}
+                            focusedChartId={focusedChartId}
+                            onFocusedChartIdChange={setFocusedChartId}
                         />
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">

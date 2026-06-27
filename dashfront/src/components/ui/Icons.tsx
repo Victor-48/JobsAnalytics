@@ -46,3 +46,36 @@ export const SaveIcon = () => (
         <path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
     </svg>
 );
+
+export const SortIcon = ({ direction }: { direction: 'asc' | 'desc' | 'none' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {direction === 'asc' && (
+            <>
+                <line x1="4" y1="6" x2="13" y2="6" />
+                <line x1="4" y1="12" x2="10" y2="12" />
+                <line x1="4" y1="18" x2="7" y2="18" />
+                <line x1="17" y1="20" x2="17" y2="4" />
+                <polyline points="14 7 17 4 20 7" />
+            </>
+        )}
+        {direction === 'desc' && (
+            <>
+                <line x1="4" y1="6" x2="7" y2="6" />
+                <line x1="4" y1="12" x2="10" y2="12" />
+                <line x1="4" y1="18" x2="13" y2="18" />
+                <line x1="17" y1="4" x2="17" y2="20" />
+                <polyline points="14 17 17 20 20 17" />
+            </>
+        )}
+        {direction === 'none' && (
+            <>
+                <line x1="4" y1="6" x2="13" y2="6" />
+                <line x1="4" y1="12" x2="10" y2="12" />
+                <line x1="4" y1="18" x2="13" y2="18" />
+                <line x1="17" y1="4" x2="17" y2="20" />
+                <polyline points="14 7 17 4 20 7" />
+                <polyline points="14 17 17 20 20 17" />
+            </>
+        )}
+    </svg>
+);

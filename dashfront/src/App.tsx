@@ -13,13 +13,14 @@ import {Joyride, EventData } from 'react-joyride';
 import { useTutorial } from './contexts/TutorialContext';
 import { AnalyticsProvider } from "./contexts/AnalyticsContext";
 import { Toaster } from "./components/ui/sonner";
+import { TooltipProvider } from "./components/ui/tooltip";
 
 
 function AppContent() {
     const { run, steps, stepIndex, stopTutorial, nextStep, prevStep } = useTutorial();
 
     return (
-        <>
+        <TooltipProvider>
             <Navigation />
             <div className="min-h-[calc(100vh-73px)] bg-background transition-colors duration-300">
                 <Routes>
@@ -37,6 +38,7 @@ function AppContent() {
                 steps={steps}
                 stepIndex={stepIndex}
                 continuous={true}
+                scrollOffset={100}
 
                 onEvent={(data: EventData) => {
                     const { action, status, type, step } = data;
@@ -83,7 +85,7 @@ function AppContent() {
                     overlayClickAction: false
                 }}
             />
-        </>
+        </TooltipProvider>
     );
 }
 function Navigation() {

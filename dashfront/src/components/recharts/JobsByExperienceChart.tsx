@@ -2,6 +2,7 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, CartesianGrid } from "recharts";
 import { formatValue, calculateTotal } from "../../utils/chartUtils";
 import CustomTooltip from "../CustomTooltip";
+import { CustomLegend } from "./CustomLegend";
 
 interface Props {
     data: any[];
@@ -34,14 +35,14 @@ export const JobsByExperienceChart = ({ data, displayType = 'bar', unit = 'absol
                 <Tooltip
                     content={<CustomTooltip formatter={(value: any) => [formatValue(value, total, unit), 'Jobs']} />}
                 />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+                <Legend content={<CustomLegend />} />
             </PieChart>
         </ResponsiveContainer>
     ) : (
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
             <BarChart data={data} margin={{ top: 20, right: 10, left: 10, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                <XAxis dataKey="name" tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dy={10} />
+                <XAxis dataKey="name" interval={0} tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dy={10} />
                 <YAxis tickFormatter={(v) => formatValue(v, total, unit).toString()} tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dx={-10} />
                 <Tooltip
                     content={<CustomTooltip formatter={(value: any) => [formatValue(value, total, unit), 'Jobs']} />}

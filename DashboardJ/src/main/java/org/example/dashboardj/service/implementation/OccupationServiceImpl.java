@@ -29,7 +29,7 @@ public class OccupationServiceImpl implements OccupationService {
 
     @Override
     public Page<OccupationDetailDTO> getAllOccupations(Pageable pageable) {
-        return occupationRepository.findAll(pageable)
+        return occupationRepository.findAllBasic(pageable)
                 .map(this::mapToDTO);
     }
 

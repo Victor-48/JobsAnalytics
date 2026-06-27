@@ -11,6 +11,12 @@ import java.util.List;
 @Repository
 public interface SkillRepository extends Neo4jRepository<Skill, String> {
     
+    @org.springframework.data.neo4j.repository.query.Query(
+        value = "MATCH (n:Skill) RETURN n SKIP $skip LIMIT $limit",
+        countQuery = "MATCH (n:Skill) RETURN count(n)"
+    )
+    org.springframework.data.domain.Page<Skill> findAllBasic(org.springframework.data.domain.Pageable pageable);
+
     @Query("MATCH (s:Skill)<-[:REQUIRES_SKILL]-(j:JobPosting) " +
            "RETURN s.preferredLabel as name, count(j) as count " +
            "ORDER BY count DESC LIMIT 10")

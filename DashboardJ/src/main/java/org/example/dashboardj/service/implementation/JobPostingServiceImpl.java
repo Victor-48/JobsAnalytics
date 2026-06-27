@@ -87,12 +87,16 @@ public class JobPostingServiceImpl implements JobPostingService {
             dto.setOccupationUri(occUri);
         }
 
-        if (job.getRequiredSkills() != null) {
-            List<SkillSummaryDTO> skills = job.getRequiredSkills().stream()
+        if (job.getRequiredSkills() != null && !job.getRequiredSkills().isEmpty()) {
+            List<String> skillUris = job.getRequiredSkills().stream()
+                .map(org.example.dashboardj.entity.Skill::getConceptUri)
+                .collect(Collectors.toList());
+            List<org.example.dashboardj.entity.Skill> fullSkills = skillRepo.findAllById(skillUris);
+            List<SkillSummaryDTO> skills = fullSkills.stream()
                 .map(s -> new SkillSummaryDTO(s.getName(), s.getConceptUri(), s.getDynamicLabels()))
                 .collect(Collectors.toList());
             dto.setRequiredSkills(skills);
-            dto.setRequiredSkillUris(skills.stream().map(SkillSummaryDTO::getUri).collect(Collectors.toList()));
+            dto.setRequiredSkillUris(skillUris);
         } else {
             dto.setRequiredSkills(new ArrayList<>());
             dto.setRequiredSkillUris(new ArrayList<>());
@@ -238,7 +242,8 @@ public class JobPostingServiceImpl implements JobPostingService {
                                 @SuppressWarnings("unchecked")
                                 Map<String, Object> map = (Map<String, Object>) obj;
                                 if (map.get("conceptUri") != null) {
-                                    skills.add(new SkillSummaryDTO((String) map.get("name"), (String) map.get("conceptUri"), null));
+                                    String skillName = map.containsKey("preferredLabel") ? (String) map.get("preferredLabel") : (String) map.get("name");
+                                    skills.add(new SkillSummaryDTO(skillName, (String) map.get("conceptUri"), null));
                                 }
                             }
                         }
@@ -458,7 +463,7 @@ public class JobPostingServiceImpl implements JobPostingService {
     @Override
     @Cacheable(value = "analyticsCache", key = "'jobTitles:' + #skill1 + ':' + #skill2")
     public Map<String, Long> getJobTitlesBySkills(String skill1, String skill2) {
-        return neo4jClient.query("MATCH (s1:Skill {name: $skill1})<-[:REQUIRES_SKILL]-(j:JobPosting)-[:REQUIRES_SKILL]->(s2:Skill {name: $skill2}) " +
+        return neo4jClient.query("MATCH (s1:Skill {preferredLabel: $skill1})<-[:REQUIRES_SKILL]-(j:JobPosting)-[:REQUIRES_SKILL]->(s2:Skill {preferredLabel: $skill2}) " +
                "RETURN j.title as name, count(j) as count " +
                "ORDER BY count DESC")
             .bind(skill1).to("skill1")
@@ -470,46 +475,136 @@ public class JobPostingServiceImpl implements JobPostingService {
             ));
     }
 
+    private String formatTrend(long current, long previous) {
+        if (previous == 0) {
+            if (current > 0) return "+100% (New)";
+            return "0%";
+        }
+        double change = ((double)(current - previous) / previous) * 100;
+        if (change > 0) return String.format("+%.1f%%", change);
+        if (change < 0) return String.format("%.1f%%", change);
+        return "0%";
+    }
+
+    @Override
+    @Cacheable(value = "analyticsCache", key = "#root.methodName")
+    public List<EmergingTechDTO> getEmergingTechIndex() {
+        Collection<Map<String, Object>> results = neo4jClient.query(
+            "MATCH (j:JobPosting)-[:REQUIRES_SKILL]->(s:Skill) " +
+            "WHERE j.postedDate >= date() - duration('P30D') " +
+            "OPTIONAL MATCH (j)-[:BELONGS_TO_SECTOR]->(sec:Sector) " +
+            "WITH s, count(DISTINCT j) as currentCount, count(DISTINCT sec) as industrySpread " +
+            "OPTIONAL MATCH (j2:JobPosting)-[:REQUIRES_SKILL]->(s) " +
+            "WHERE j2.postedDate >= date() - duration('P60D') AND j2.postedDate < date() - duration('P30D') " +
+            "WITH s, currentCount, industrySpread, count(j2) as previousCount " +
+            "WITH s, currentCount, industrySpread, previousCount, " +
+            "     CASE WHEN previousCount = 0 THEN 100.0 ELSE ((currentCount - previousCount) * 100.0 / previousCount) END as growth " +
+            "WHERE currentCount >= 2 " +
+            "WITH s, currentCount, industrySpread, growth, " +
+            "     (CASE WHEN currentCount > 20 THEN 20.0 ELSE currentCount END) + " +
+            "     (CASE WHEN growth > 50 THEN 50.0 ELSE growth END) + " +
+            "     (CASE WHEN industrySpread * 5 > 30 THEN 30.0 ELSE industrySpread * 5 END) as etiScore " +
+            "ORDER BY etiScore DESC LIMIT 10 " +
+            "RETURN s.preferredLabel as skill, etiScore, currentCount, growth, industrySpread"
+        ).fetch().all();
+
+        return results.stream().map(row -> new EmergingTechDTO(
+            (String) row.get("skill"),
+            ((Number) row.get("etiScore")).doubleValue(),
+            ((Number) row.get("currentCount")).longValue(),
+            ((Number) row.get("growth")).doubleValue(),
+            ((Number) row.get("industrySpread")).longValue()
+        )).collect(Collectors.toList());
+    }
+
     @Override
     @Cacheable(value = "analyticsCache", key = "#root.methodName")
     public List<KeyIndicatorDTO> getKeyIndicators() {
-        long totalJobs = jobRepo.count();
-        KeyIndicatorDTO totalJobsIndicator = new KeyIndicatorDTO("Total Active Jobs", String.format("%,d", totalJobs), "From live data");
+        // Total Jobs with Trend
+        Collection<Map<String, Object>> totalJobsList = neo4jClient.query(
+            "MATCH (j:JobPosting) WHERE j.postedDate >= date() - duration('P30D') WITH count(j) as currentCount " +
+            "OPTIONAL MATCH (j2:JobPosting) WHERE j2.postedDate >= date() - duration('P60D') AND j2.postedDate < date() - duration('P30D') WITH currentCount, count(j2) as previousCount " +
+            "RETURN currentCount, previousCount"
+        ).fetch().all();
+        
+        long totalJobs = jobRepo.count(); // Still show total active jobs globally
+        String totalJobsTrend = "0%";
+        if (!totalJobsList.isEmpty()) {
+            Map<String, Object> res = totalJobsList.iterator().next();
+            long current = ((Number) res.getOrDefault("currentCount", 0)).longValue();
+            long previous = ((Number) res.getOrDefault("previousCount", 0)).longValue();
+            totalJobsTrend = formatTrend(current, previous) + " this month";
+        }
+        KeyIndicatorDTO totalJobsIndicator = new KeyIndicatorDTO("Total Active Jobs", String.format("%,d", totalJobs), totalJobsTrend);
 
-        Collection<Map<String, Object>> topSkillList = neo4jClient.query("MATCH (s:Skill)<-[:REQUIRES_SKILL]-(j:JobPosting) " +
-               "RETURN s.preferredLabel as name, count(j) as count " +
-               "ORDER BY count DESC LIMIT 1")
-            .fetch().all();
+        // Trending Skill
+        Collection<Map<String, Object>> topSkillList = neo4jClient.query(
+            "MATCH (j:JobPosting)-[:REQUIRES_SKILL]->(s:Skill) " +
+            "WHERE j.postedDate >= date() - duration('P30D') " +
+            "WITH s, count(j) as currentCount " +
+            "OPTIONAL MATCH (j2:JobPosting)-[:REQUIRES_SKILL]->(s) " +
+            "WHERE j2.postedDate >= date() - duration('P60D') AND j2.postedDate < date() - duration('P30D') " +
+            "WITH s, currentCount, count(j2) as previousCount " +
+            "WITH s, currentCount, previousCount, " +
+            "     CASE WHEN previousCount = 0 THEN 100.0 ELSE ((currentCount - previousCount) * 100.0 / previousCount) END as growth " +
+            "ORDER BY growth DESC, currentCount DESC LIMIT 1 " +
+            "RETURN s.preferredLabel as name, currentCount, previousCount, growth"
+        ).fetch().all();
+        
         KeyIndicatorDTO topSkillIndicator;
         if (topSkillList.isEmpty()) {
-            topSkillIndicator = new KeyIndicatorDTO("Top Skill", "N/A", "Insufficient data");
+            topSkillIndicator = new KeyIndicatorDTO("Trending Skill", "N/A", "Insufficient data");
         } else {
-            Map<String, Object> topSkillResult = topSkillList.iterator().next();
-            topSkillIndicator = new KeyIndicatorDTO("Top Skill", (String) topSkillResult.get("name"), String.format("%,d mentions", ((Number) topSkillResult.get("count")).longValue()));
+            Map<String, Object> res = topSkillList.iterator().next();
+            long currentCount = ((Number) res.get("currentCount")).longValue();
+            long previousCount = ((Number) res.get("previousCount")).longValue();
+            topSkillIndicator = new KeyIndicatorDTO("Trending Skill", (String) res.get("name"), formatTrend(currentCount, previousCount) + " this month");
         }
 
-        Collection<Map<String, Object>> topRoleList = neo4jClient.query("MATCH (j:JobPosting) WHERE j.title IS NOT NULL " +
-               "RETURN j.title as name, count(j) as count " +
-               "ORDER BY count DESC LIMIT 1")
-            .fetch().all();
+        // Trending Role
+        Collection<Map<String, Object>> topRoleList = neo4jClient.query(
+            "MATCH (j:JobPosting) WHERE j.title IS NOT NULL AND j.postedDate >= date() - duration('P30D') " +
+            "WITH j.title as title, count(j) as currentCount " +
+            "OPTIONAL MATCH (j2:JobPosting) WHERE j2.title = title AND j2.postedDate >= date() - duration('P60D') AND j2.postedDate < date() - duration('P30D') " +
+            "WITH title, currentCount, count(j2) as previousCount " +
+            "WITH title, currentCount, previousCount, " +
+            "     CASE WHEN previousCount = 0 THEN 100.0 ELSE ((currentCount - previousCount) * 100.0 / previousCount) END as growth " +
+            "ORDER BY growth DESC, currentCount DESC LIMIT 1 " +
+            "RETURN title as name, currentCount, previousCount, growth"
+        ).fetch().all();
+        
         KeyIndicatorDTO topDemandedRoleIndicator;
         if (topRoleList.isEmpty()) {
-            topDemandedRoleIndicator = new KeyIndicatorDTO("Top Demanded Role", "N/A", "");
+            topDemandedRoleIndicator = new KeyIndicatorDTO("Emerging Role", "N/A", "Insufficient data");
         } else {
-            Map<String, Object> topRoleResult = topRoleList.iterator().next();
-            topDemandedRoleIndicator = new KeyIndicatorDTO("Top Demanded Role", (String) topRoleResult.get("name"), String.format("%,d mentions", ((Number) topRoleResult.get("count")).longValue()));
+            Map<String, Object> res = topRoleList.iterator().next();
+            long currentCount = ((Number) res.get("currentCount")).longValue();
+            long previousCount = ((Number) res.get("previousCount")).longValue();
+            topDemandedRoleIndicator = new KeyIndicatorDTO("Emerging Role", (String) res.get("name"), formatTrend(currentCount, previousCount) + " this month");
         }
 
-        Collection<Map<String, Object>> topIndustryList = neo4jClient.query("MATCH (j:JobPosting)-[:BELONGS_TO_SECTOR]->(s:Sector) " +
-               "RETURN s.naceName as name, count(j) as count " +
-               "ORDER BY count DESC LIMIT 1")
-            .fetch().all();
+        // Trending Industry
+        Collection<Map<String, Object>> topIndustryList = neo4jClient.query(
+            "MATCH (j:JobPosting)-[:BELONGS_TO_SECTOR]->(s:Sector) " +
+            "WHERE j.postedDate >= date() - duration('P30D') " +
+            "WITH s, count(j) as currentCount " +
+            "OPTIONAL MATCH (j2:JobPosting)-[:BELONGS_TO_SECTOR]->(s) " +
+            "WHERE j2.postedDate >= date() - duration('P60D') AND j2.postedDate < date() - duration('P30D') " +
+            "WITH s, currentCount, count(j2) as previousCount " +
+            "WITH s, currentCount, previousCount, " +
+            "     CASE WHEN previousCount = 0 THEN 100.0 ELSE ((currentCount - previousCount) * 100.0 / previousCount) END as growth " +
+            "ORDER BY growth DESC, currentCount DESC LIMIT 1 " +
+            "RETURN s.naceName as name, currentCount, previousCount, growth"
+        ).fetch().all();
+        
         KeyIndicatorDTO topIndustryIndicator;
         if (topIndustryList.isEmpty()) {
-            topIndustryIndicator = new KeyIndicatorDTO("Top Industry", "N/A", "");
+            topIndustryIndicator = new KeyIndicatorDTO("Hot Industry", "N/A", "Insufficient data");
         } else {
-            Map<String, Object> topIndustryResult = topIndustryList.iterator().next();
-            topIndustryIndicator = new KeyIndicatorDTO("Top Industry", (String) topIndustryResult.get("name"), String.format("%,d jobs", ((Number) topIndustryResult.get("count")).longValue()));
+            Map<String, Object> res = topIndustryList.iterator().next();
+            long currentCount = ((Number) res.get("currentCount")).longValue();
+            long previousCount = ((Number) res.get("previousCount")).longValue();
+            topIndustryIndicator = new KeyIndicatorDTO("Hot Industry", (String) res.get("name"), formatTrend(currentCount, previousCount) + " this month");
         }
 
         // Add Salary

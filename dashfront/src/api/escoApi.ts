@@ -58,6 +58,16 @@ export async function getSkills(page = 0, size = 10): Promise<PageResponse<Skill
     return res.data;
 }
 
+export async function searchSkills(q: string, page = 0, size = 10): Promise<PageResponse<SkillSummaryDTO>> {
+    const res = await api.get(`/search/skills?q=${encodeURIComponent(q)}&page=${page}&size=${size}`);
+    return res.data;
+}
+
+export async function searchOccupations(q: string, page = 0, size = 10): Promise<PageResponse<OccupationDetailDTO>> {
+    const res = await api.get(`/search/occupations?q=${encodeURIComponent(q)}&page=${page}&size=${size}`);
+    return res.data;
+}
+
 export async function getOccupations(page = 0, size = 10): Promise<PageResponse<OccupationDetailDTO>> {
     const res = await api.get(`/esco/occupations?page=${page}&size=${size}`);
     return res.data;

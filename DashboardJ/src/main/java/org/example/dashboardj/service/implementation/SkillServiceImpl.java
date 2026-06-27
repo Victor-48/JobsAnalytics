@@ -25,7 +25,7 @@ public class SkillServiceImpl implements SkillService {
 
     @Override
     public Page<SkillSummaryDTO> getAllSkills(Pageable pageable) {
-        return skillRepository.findAll(pageable)
+        return skillRepository.findAllBasic(pageable)
                 .map(this::mapToDTO);
     }
 
@@ -49,17 +49,67 @@ public class SkillServiceImpl implements SkillService {
     }
 
     @Override
-    public org.example.dashboardj.dto.GraphDataDTO getSkillCoOccurrence() {
-        List<org.example.dashboardj.dto.GraphLinkDTO> links = skillRepository.getSkillCoOccurrence();
+    public org.example.dashboardj.dto.GraphDataDTO getSkillCoOccurrence(String startDate, String endDate) {
+        String queryStr = "MATCH (s1:Skill)<-[:REQUIRES_SKILL]-(j:JobPosting)-[:REQUIRES_SKILL]->(s2:Skill) " +
+            "WHERE elementId(s1) < elementId(s2) ";
+            
+        if (startDate != null && !startDate.isEmpty() && endDate != null && !endDate.isEmpty()) {
+            queryStr += "AND j.postedDate >= date($startDate) AND j.postedDate <= date($endDate) ";
+        }
+        
+        queryStr += "RETURN s1.preferredLabel as source, s2.preferredLabel as target, count(j) as value " +
+            "ORDER BY value DESC LIMIT 50";
+            
+        var queryObj = neo4jClient.query(queryStr);
+        java.util.Collection<java.util.Map<String, Object>> results;
+        if (startDate != null && !startDate.isEmpty() && endDate != null && !endDate.isEmpty()) {
+            results = queryObj.bind(startDate).to("startDate").bind(endDate).to("endDate").fetch().all();
+        } else {
+            results = queryObj.fetch().all();
+        }
+        
+        List<org.example.dashboardj.dto.GraphLinkDTO> links = results.stream().map(row -> 
+            new org.example.dashboardj.dto.GraphLinkDTO(
+                (String) row.get("source"),
+                (String) row.get("target"),
+                ((Number) row.get("value")).longValue(),
+                0.0
+            )
+        ).collect(Collectors.toList());
+
         return buildGraphData(links);
     }
 
     @Override
-    public org.example.dashboardj.dto.GraphDataDTO getSkillCoOccurrenceTrends() {
-        List<org.example.dashboardj.dto.GraphLinkTrendDTO> trendLinks = skillRepository.getSkillCoOccurrenceTrends();
-        List<org.example.dashboardj.dto.GraphLinkDTO> links = trendLinks.stream()
-            .map(t -> new org.example.dashboardj.dto.GraphLinkDTO(t.getSource(), t.getTarget(), t.getValue() != null ? t.getValue() : 0L, t.getGrowth()))
-            .collect(Collectors.toList());
+    public org.example.dashboardj.dto.GraphDataDTO getSkillCoOccurrenceTrends(String referenceDate) {
+        String refDateStr = (referenceDate != null && !referenceDate.isEmpty()) ? "date($refDate)" : "date()";
+        
+        String queryStr = "MATCH (s1:Skill)<-[:REQUIRES_SKILL]-(j:JobPosting)-[:REQUIRES_SKILL]->(s2:Skill) " +
+            "WHERE elementId(s1) < elementId(s2) " +
+            "WITH s1, s2, count(j) as value, " +
+            "sum(case when j.postedDate >= " + refDateStr + " - duration('P30D') AND j.postedDate <= " + refDateStr + " then 1 else 0 end) as recentCount, " +
+            "sum(case when j.postedDate < " + refDateStr + " - duration('P30D') AND j.postedDate >= " + refDateStr + " - duration('P60D') then 1 else 0 end) as pastCount " +
+            "RETURN s1.preferredLabel as source, s2.preferredLabel as target, value, " +
+            "case when pastCount > 0 then ((toFloat(recentCount) - toFloat(pastCount)) / toFloat(pastCount)) * 100 else 100.0 end as growth " +
+            "ORDER BY value DESC LIMIT 50";
+
+        var queryObj = neo4jClient.query(queryStr);
+        java.util.Collection<java.util.Map<String, Object>> results;
+        if (referenceDate != null && !referenceDate.isEmpty()) {
+            results = queryObj.bind(referenceDate).to("refDate").fetch().all();
+        } else {
+            results = queryObj.fetch().all();
+        }
+        
+        List<org.example.dashboardj.dto.GraphLinkDTO> links = results.stream().map(row -> 
+            new org.example.dashboardj.dto.GraphLinkDTO(
+                (String) row.get("source"),
+                (String) row.get("target"),
+                ((Number) row.get("value")).longValue(),
+                ((Number) row.get("growth")).doubleValue()
+            )
+        ).collect(Collectors.toList());
+
         return buildGraphData(links);
     }
 

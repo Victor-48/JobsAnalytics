@@ -8,6 +8,8 @@ import HeatmapChart from "./HeatmapChart";
 import TreemapChart from "./TreemapChart";
 import BubbleChart from "./BubbleChart";
 import RadarChart from "./RadarChart";
+import CustomTooltip from '../CustomTooltip';
+import { CustomLegend } from './CustomLegend';
 
 interface GenericDynamicChartProps {
     chart: any;
@@ -45,7 +47,7 @@ export default function GenericDynamicChart({ chart, onClose }: GenericDynamicCh
 
             {/* Chart Container */}
             <div className="flex-grow min-h-0 mt-8">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                     {chart.chartType === 'bar' ? (
                         <BarChart data={chart.data} margin={{ top: 30, right: 10, left: 10, bottom: 20 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
@@ -81,11 +83,8 @@ export default function GenericDynamicChart({ chart, onClose }: GenericDynamicCh
                             >
                                 {chart.data.map((_: any, index: number) => <Cell key={`cell-${index}`} fill={getThemeColor(index)} />)}
                             </Pie>
-                            <Tooltip
-                                contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                formatter={(value: any) => [value, chart.yAxisLabel || 'Value']}
-                            />
-                            <Legend />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Legend content={<CustomLegend />} />
                         </PieChart>
                     ) : chart.chartType === 'heatmap' ? (
                         <HeatmapChart data={chart.data} />

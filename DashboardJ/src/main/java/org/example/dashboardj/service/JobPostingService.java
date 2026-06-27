@@ -1,5 +1,6 @@
 package org.example.dashboardj.service;
 
+import org.example.dashboardj.dto.EmergingTechDTO;
 import org.example.dashboardj.dto.JobPostingDTO;
 import org.example.dashboardj.dto.KeyIndicatorDTO;
 import org.springframework.data.domain.Page;
@@ -32,6 +33,7 @@ public interface JobPostingService {
     Map<String, Long> getJobPostingsOverTime();
     
     List<KeyIndicatorDTO> getKeyIndicators();
+    List<EmergingTechDTO> getEmergingTechIndex();
     
     void generateTestData();
 }

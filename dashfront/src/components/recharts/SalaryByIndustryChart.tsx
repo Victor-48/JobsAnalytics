@@ -11,6 +11,19 @@ interface Props {
     onBackClick: () => void;
 }
 
+const CustomTick = (props: any) => {
+    const { x, y, payload } = props;
+    return (
+        <g transform={`translate(${x},${y})`}>
+            <foreignObject x={-80} y={0} width={160} height={100}>
+                <div xmlns="http://www.w3.org/1999/xhtml" style={{ textAlign: 'center', fontSize: '11px', color: 'hsl(var(--muted-foreground))', wordWrap: 'break-word', lineHeight: '1.2', display: 'flex', justifyContent: 'center', hyphens: 'auto' }}>
+                    {payload.value}
+                </div>
+            </foreignObject>
+        </g>
+    );
+};
+
 export const SalaryByIndustryChart = ({
                                           data,
                                           isDrillDown,
@@ -51,10 +64,10 @@ export const SalaryByIndustryChart = ({
                     No sub-sectors found for this industry.
                 </div>
             ) : (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                     <BarChart data={data || []} margin={{ top: 20, right: 10, left: 10, bottom: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                        <XAxis dataKey="name" tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dy={10} />
+                        <XAxis dataKey="name" interval={0} tick={<CustomTick />} axisLine={false} tickLine={false} height={100} dy={10} />
                         <YAxis tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} dx={-10} />
                         <Tooltip
                             content={<CustomTooltip formatter={(value: any) => [isDrillDown ? value : `$${value}`, isDrillDown ? 'Job Postings' : 'Avg Salary']} />}
@@ -63,6 +76,7 @@ export const SalaryByIndustryChart = ({
                             dataKey={dataKey}
                             fill={isDrillDown ? "hsl(var(--chart-2))" : "hsl(var(--chart-1))"}
                             radius={[4, 4, 0, 0]}
+                            barSize={40}
                             onClick={!isDrillDown ? onIndustryClick : undefined}
                             cursor={!isDrillDown ? "pointer" : "default"}
                         />

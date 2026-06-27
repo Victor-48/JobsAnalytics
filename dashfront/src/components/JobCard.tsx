@@ -1,7 +1,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import type { JobPosting } from "../types/Job";
-import "../styles/JobCard.css";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "./ui/card";
+import { Badge } from "./ui/badge";
 
 interface Props {
     job: JobPosting;
@@ -9,70 +10,73 @@ interface Props {
 
 export default function JobCard({ job }: Props) {
     return (
-        <div className="border border-border rounded-lg shadow-sm p-4 hover:shadow-md transition bg-card text-card-foreground flex flex-col justify-between h-full relative">
+        <Card className="flex flex-col h-full relative group hover:shadow-md transition-all duration-300 border-border">
             {job.id && (
-                <div className="absolute top-4 right-4">
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Link 
                         to={`/edit-job/${job.id}`} 
-                        className="text-xs bg-secondary hover:bg-secondary/80 text-secondary-foreground px-3 py-1 rounded transition"
+                        className="text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground px-3 py-1.5 rounded-md transition-colors shadow-sm"
                     >
                         Edit
                     </Link>
                 </div>
             )}
             
-            <div>
-                <h3 className="font-bold text-lg text-primary pr-12">{job.title}</h3>
-                <p className="text-foreground font-medium text-sm mb-2">{job.company}</p>
+            <CardHeader className="px-6 pt-6 pb-4">
+                <CardTitle className="font-bold text-lg text-primary pr-14 leading-tight">{job.title}</CardTitle>
+                <p className="text-foreground font-medium text-sm mt-1">{job.company}</p>
                 
-                <div className="flex flex-wrap gap-2 mb-3">
+                <div className="flex flex-wrap gap-2 mt-3">
                     {job.remoteFlexibility && (
-                        <span className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full font-semibold">
+                        <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
                             {job.remoteFlexibility}
-                        </span>
+                        </Badge>
                     )}
                     {job.sector && (
-                        <span className="px-2 py-1 bg-secondary text-secondary-foreground text-xs rounded-full font-semibold">
+                        <Badge variant="secondary">
                             {job.sector.name}
-                        </span>
+                        </Badge>
                     )}
                     {job.employmentType && (
-                        <span className="px-2 py-1 bg-accent/20 text-accent text-xs rounded-full font-semibold">
+                        <Badge variant="outline" className="bg-accent/10 text-accent border-accent/20">
                             {job.employmentType}
-                        </span>
+                        </Badge>
                     )}
                 </div>
+            </CardHeader>
 
-                <div className="text-sm text-muted-foreground space-y-1 mb-4">
-                    <p><strong className="text-foreground">Location:</strong> {job.location}</p>
+            <CardContent className="px-6 pb-4 flex-grow space-y-4">
+                <div className="text-sm text-muted-foreground space-y-1.5">
+                    <p className="flex gap-2"><strong className="text-foreground font-medium">Location:</strong> <span>{job.location}</span></p>
                     {job.salary && (
-                        <p><strong className="text-foreground">Salary:</strong> {job.salary} {job.currency || 'USD'}</p>
+                        <p className="flex gap-2"><strong className="text-foreground font-medium">Salary:</strong> <span>{job.salary} {job.currency || 'USD'}</span></p>
                     )}
                     {job.experienceLevel && (
-                        <p><strong className="text-foreground">Experience:</strong> {job.experienceLevel}</p>
+                        <p className="flex gap-2"><strong className="text-foreground font-medium">Experience:</strong> <span>{job.experienceLevel}</span></p>
                     )}
                 </div>
-            </div>
 
-            <div>
-                <div className="mb-2">
-                    <strong className="text-xs text-muted-foreground uppercase tracking-wider">Required Skills:</strong>
-                    <div className="flex flex-wrap gap-1 mt-1">
+                <div>
+                    <strong className="text-xs text-muted-foreground uppercase tracking-wider mb-2 block">Required Skills</strong>
+                    <div className="flex flex-wrap gap-1.5">
                         {job.requiredSkills && job.requiredSkills.length > 0 ? (
                             job.requiredSkills.map(skill => (
-                                <span key={skill.uri} className="px-2 py-1 bg-background text-muted-foreground text-xs rounded border border-border">
+                                <Badge key={skill.uri} variant="outline" className="text-muted-foreground font-normal">
                                     {skill.name}
-                                </span>
+                                </Badge>
                             ))
                         ) : (
-                            <span className="text-xs text-muted-foreground/50">None specified</span>
+                            <span className="text-xs text-muted-foreground/50 italic">None specified</span>
                         )}
                     </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-3 border-t border-border pt-2">
+            </CardContent>
+
+            <CardFooter className="px-6 pb-6 pt-4 border-t border-border/50 bg-muted/20">
+                <p className="text-xs text-muted-foreground">
                     Posted: {job.postedDate ? (job.postedDate.includes('T') ? new Date(job.postedDate) : new Date(job.postedDate + "T00:00:00")).toLocaleDateString() : 'Unknown'}
                 </p>
-            </div>
-        </div>
+            </CardFooter>
+        </Card>
     );
 }

@@ -3,6 +3,7 @@ package org.example.dashboardj.controller;
 import lombok.RequiredArgsConstructor;
 import org.example.dashboardj.dto.JobPostingDTO;
 import org.example.dashboardj.dto.KeyIndicatorDTO;
+import org.example.dashboardj.dto.EmergingTechDTO;
 import org.example.dashboardj.service.JobPostingService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -79,6 +80,11 @@ public class JobPostingController {
     @GetMapping("/stats/key-indicators")
     public ResponseEntity<List<KeyIndicatorDTO>> getKeyIndicators() {
         return ResponseEntity.ok(service.getKeyIndicators());
+    }
+
+    @GetMapping("/stats/emerging-tech-index")
+    public ResponseEntity<List<EmergingTechDTO>> getEmergingTechIndex() {
+        return ResponseEntity.ok(service.getEmergingTechIndex());
     }
 
     @GetMapping("/stats/salary-by-industry")

@@ -1,26 +1,15 @@
-import { useEffect, useState } from "react";
+import React from 'react';
 import {
     AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
 } from "recharts";
-import { fetchJobPostingsOverTime } from "../api/jobApi";
 import CustomTooltip from "./CustomTooltip";
 
-export default function TimeSeriesChart() {
-    const [data, setData] = useState<any[]>([]);
+interface Props {
+    data: any[];
+}
 
-    useEffect(() => {
-        fetchJobPostingsOverTime().then((rawData) => {
-            if (rawData) {
-                // Convert Map<String, Long> to Array of objects for Recharts
-                const formatted = Object.keys(rawData)
-                    .sort((a, b) => new Date(a + "T00:00:00").getTime() - new Date(b + "T00:00:00").getTime())
-                    .map(key => ({ date: key, count: rawData[key] }));
-                setData(formatted);
-            }
-        }).catch(console.error);
-    }, []);
-
-    if (data.length === 0) return null;
+export default function TimeSeriesChart({ data }: Props) {
+    if (!data || data.length === 0) return null;
 
     return (
         <div className="w-full h-full aspect-video">
@@ -51,17 +40,13 @@ export default function TimeSeriesChart() {
                         tickLine={false}
                         dx={-10}
                     />
-                    <Tooltip 
-                        content={<CustomTooltip labelFormatter={(label: any) => new Date(label + "T00:00:00").toLocaleDateString()} formatter={(value: any) => [value, 'New Jobs']} />}
-                    />
+                    <Tooltip content={<CustomTooltip formatter={(value: any) => [value, 'Postings']} />} />
                     <Area 
                         type="monotone" 
                         dataKey="count" 
                         stroke="hsl(var(--primary))" 
-                        strokeWidth={2}
                         fillOpacity={1} 
                         fill="url(#colorCount)" 
-                        animationDuration={1000}
                     />
                 </AreaChart>
             </ResponsiveContainer>

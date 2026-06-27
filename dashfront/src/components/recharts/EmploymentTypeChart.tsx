@@ -2,6 +2,7 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, CartesianGrid } from "recharts";
 import { formatValue, calculateTotal } from "../../utils/chartUtils";
 import CustomTooltip from "../CustomTooltip";
+import { CustomLegend } from "./CustomLegend";
 
 interface Props {
     data: any[];
@@ -34,7 +35,7 @@ export const EmploymentTypeChart = ({ data, displayType = 'pie', unit = 'percent
                 <Tooltip
                     content={<CustomTooltip formatter={(value: any) => [formatValue(value, total, unit), 'Jobs']} />}
                 />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+                <Legend content={<CustomLegend />} />
             </PieChart>
         </ResponsiveContainer>
     ) : (

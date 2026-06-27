@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { getOccupations, getSkills, OccupationDetailDTO, SkillSummaryDTO } from '../api/escoApi';
+import { getOccupations, getSkills, searchSkills, searchOccupations, OccupationDetailDTO, SkillSummaryDTO } from '../api/escoApi';
 import ForceGraph2D from 'react-force-graph-2d';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Input } from '../components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
+import { Badge } from '../components/ui/badge';
 
 export default function EscoExplorer() {
     const [view, setView] = useState<'table' | 'graph'>('table');
@@ -9,8 +13,14 @@ export default function EscoExplorer() {
     const [skills, setSkills] = useState<SkillSummaryDTO[]>([]);
     const [loading, setLoading] = useState(true);
     
+    // Search states
+    const [occSearch, setOccSearch] = useState('');
+    const [skillSearch, setSkillSearch] = useState('');
+    const [graphSearch, setGraphSearch] = useState('');
+    
     // Graph Data state
     const [graphData, setGraphData] = useState({ nodes: [], links: [] });
+    const fgRef = React.useRef<any>();
 
     useEffect(() => {
         const fetchData = async () => {
@@ -47,6 +57,36 @@ export default function EscoExplorer() {
         fetchData();
     }, []);
 
+    useEffect(() => {
+        const handler = setTimeout(async () => {
+            try {
+                if (occSearch.trim()) {
+                    const res = await searchOccupations(occSearch, 0, 50);
+                    setOccupations(res.content);
+                } else {
+                    const res = await getOccupations(0, 50);
+                    setOccupations(res.content);
+                }
+            } catch (err) { console.error(err); }
+        }, 500);
+        return () => clearTimeout(handler);
+    }, [occSearch]);
+
+    useEffect(() => {
+        const handler = setTimeout(async () => {
+            try {
+                if (skillSearch.trim()) {
+                    const res = await searchSkills(skillSearch, 0, 50);
+                    setSkills(res.content);
+                } else {
+                    const res = await getSkills(0, 50);
+                    setSkills(res.content);
+                }
+            } catch (err) { console.error(err); }
+        }, 500);
+        return () => clearTimeout(handler);
+    }, [skillSearch]);
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-full min-h-[60vh]">
@@ -56,93 +96,132 @@ export default function EscoExplorer() {
     }
 
     return (
-        <div className="p-6 space-y-6">
-            <div className="flex items-center justify-between">
+        <Tabs value={view} onValueChange={(val) => setView(val as 'table' | 'graph')} className="max-w-7xl mx-auto p-6 space-y-6 flex flex-col">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">ESCO Explorer</h1>
-                    <p className="text-muted-foreground">Navigate the European Skills, Competences, and Occupations taxonomy.</p>
+                    <p className="text-muted-foreground mt-1">Navigate the European Skills, Competences, and Occupations taxonomy.</p>
                 </div>
-                <div className="flex space-x-2 bg-secondary p-1 rounded-lg">
-                    <button 
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${view === 'table' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                        onClick={() => setView('table')}
-                    >
-                        Data Tables
-                    </button>
-                    <button 
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${view === 'graph' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                        onClick={() => setView('graph')}
-                    >
-                        Network Graph
-                    </button>
-                </div>
+                <TabsList className="grid w-full grid-cols-2 md:w-auto">
+                    <TabsTrigger value="table">Data Tables</TabsTrigger>
+                    <TabsTrigger value="graph">Network Graph</TabsTrigger>
+                </TabsList>
             </div>
 
-            {view === 'graph' ? (
-                <div className="border rounded-xl bg-card overflow-hidden h-[70vh]">
-                    <ForceGraph2D
-                        graphData={graphData}
-                        nodeLabel="name"
-                        nodeAutoColorBy="group"
-                        linkDirectionalParticles={2}
-                        linkDirectionalParticleSpeed={d => 0.01}
-                        backgroundColor="transparent"
-                        linkColor={() => 'rgba(150, 150, 150, 0.2)'}
-                    />
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="border rounded-xl bg-card overflow-hidden">
-                        <div className="p-4 border-b bg-muted/30">
-                            <h2 className="font-semibold">Occupations</h2>
-                        </div>
-                        <div className="overflow-auto max-h-[60vh]">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-muted/50 sticky top-0">
-                                    <tr>
-                                        <th className="px-4 py-3 font-medium">Name</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {occupations.map(occ => (
-                                        <tr key={occ.uri} className="border-b last:border-0 hover:bg-muted/20">
-                                            <td className="px-4 py-3">{occ.name}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+            <TabsContent value="graph" className="mt-6 border border-border rounded-xl bg-card overflow-hidden h-[70vh] relative shadow-sm">
+                <div className="absolute top-4 right-4 z-10 w-64 shadow-md rounded-md">
+                    <div className="relative bg-background rounded-md">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search node in graph..."
+                            value={graphSearch}
+                            onChange={(e) => {
+                                setGraphSearch(e.target.value);
+                                if (e.target.value.trim() && fgRef.current) {
+                                    const query = e.target.value.toLowerCase();
+                                    const node = graphData.nodes.find((n: any) => n.name.toLowerCase().includes(query));
+                                    if (node) {
+                                        fgRef.current.centerAt(node.x, node.y, 1000);
+                                        fgRef.current.zoom(4, 1000);
+                                    }
+                                }
+                            }}
+                            className="pl-9 bg-background/80 backdrop-blur-sm border-border/50"
+                        />
                     </div>
+                </div>
+                <ForceGraph2D
+                    ref={fgRef}
+                    graphData={graphData}
+                    nodeLabel="name"
+                    nodeAutoColorBy="group"
+                    linkDirectionalParticles={2}
+                    linkDirectionalParticleSpeed={d => 0.01}
+                    backgroundColor="transparent"
+                    onNodeDragStart={(node) => {
+                        graphData.nodes.forEach((n: any) => {
+                            if (n.id !== node.id) {
+                                n.fx = n.x;
+                                n.fy = n.y;
+                            }
+                        });
+                    }}
+                    onNodeDragEnd={(node) => {
+                        node.fx = node.x;
+                        node.fy = node.y;
+                    }}
+                />
+            </TabsContent>
 
-                    <div className="border rounded-xl bg-card overflow-hidden">
-                        <div className="p-4 border-b bg-muted/30">
-                            <h2 className="font-semibold">Skills</h2>
-                        </div>
-                        <div className="overflow-auto max-h-[60vh]">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-muted/50 sticky top-0">
-                                    <tr>
-                                        <th className="px-4 py-3 font-medium">Name</th>
-                                        <th className="px-4 py-3 font-medium">Type</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {skills.map(skill => (
-                                        <tr key={skill.uri} className="border-b last:border-0 hover:bg-muted/20">
-                                            <td className="px-4 py-3">{skill.name}</td>
-                                            <td className="px-4 py-3">
-                                                <span className="px-2 py-1 bg-secondary text-secondary-foreground rounded-full text-xs">
-                                                    {skill.skillType || 'skill/competence'}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+            <TabsContent value="table" className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="border rounded-xl bg-card overflow-hidden shadow-sm">
+                    <div className="p-4 border-b border-border bg-muted/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <h2 className="font-semibold text-foreground">Occupations</h2>
+                        <div className="relative w-full sm:w-64">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search occupations..."
+                                value={occSearch}
+                                onChange={(e) => setOccSearch(e.target.value)}
+                                className="pl-9 h-9"
+                            />
                         </div>
                     </div>
+                    <div className="overflow-auto max-h-[60vh]">
+                        <Table>
+                            <TableHeader className="bg-muted/30 sticky top-0 z-10">
+                                <TableRow>
+                                    <TableHead className="font-medium">Name</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {occupations.map(occ => (
+                                    <TableRow key={occ.conceptUri}>
+                                        <TableCell>{occ.name}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </div>
-            )}
-        </div>
+
+                <div className="border rounded-xl bg-card overflow-hidden shadow-sm">
+                    <div className="p-4 border-b border-border bg-muted/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <h2 className="font-semibold text-foreground">Skills</h2>
+                        <div className="relative w-full sm:w-64">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search skills..."
+                                value={skillSearch}
+                                onChange={(e) => setSkillSearch(e.target.value)}
+                                className="pl-9 h-9"
+                            />
+                        </div>
+                    </div>
+                    <div className="overflow-auto max-h-[60vh]">
+                        <Table>
+                            <TableHeader className="bg-muted/30 sticky top-0 z-10">
+                                <TableRow>
+                                    <TableHead className="font-medium">Name</TableHead>
+                                    <TableHead className="font-medium">Type</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {skills.map(skill => (
+                                    <TableRow key={skill.conceptUri}>
+                                        <TableCell>{skill.name}</TableCell>
+                                        <TableCell>
+                                            <Badge variant="secondary" className="font-normal">
+                                                {skill.skillType || 'skill/competence'}
+                                            </Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </div>
+            </TabsContent>
+        </Tabs>
     );
 }

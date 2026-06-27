@@ -1,12 +1,15 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, {createContext, useContext, ReactNode, useEffect, useState} from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
     fetchSalaryByIndustry,
     fetchSalaryByExperience,
     fetchRemoteVsOnsiteStats,
     fetchEmploymentTypeDistribution,
-    fetchTopSkills
+    fetchTopSkills,
+    fetchJobPostingsOverTime,
+    fetchEmergingTechIndex
 } from '../api/jobApi';
+
 import { NACE_SECTORS } from '../pages/AddJob';
 
 interface AnalyticsData {
@@ -15,6 +18,8 @@ interface AnalyticsData {
     remoteVsOnsite: any[];
     employmentType: any[];
     topSkills: any[];
+    postingsOverTime: any[];
+    emergingTech: any[];
 }
 
 interface AnalyticsContextType {
@@ -59,12 +64,24 @@ export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
         queryFn: fetchTopSkills,
     });
 
+    const { data: emergingTechData, isLoading: isLoadingEmergingTech } = useQuery({
+        queryKey: ['emergingTech'],
+        queryFn: fetchEmergingTechIndex,
+    });
+
+    const { data: postingsOverTimeRaw, isLoading: isLoadingPostings } = useQuery({
+        queryKey: ['postingsOverTime'],
+        queryFn: fetchJobPostingsOverTime,
+    });
+
     const [formattedData, setFormattedData] = useState<AnalyticsData>({
         salaryByIndustry: [],
         jobsByExperience: [],
         remoteVsOnsite: [],
         employmentType: [],
         topSkills: [],
+        postingsOverTime: [],
+        emergingTech: [],
     });
 
     useEffect(() => {
@@ -82,13 +99,18 @@ export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
             const remoteVsOnsite = remoteVsOnsiteData ? Object.keys(remoteVsOnsiteData).map(key => ({ name: key, salary: Math.round(remoteVsOnsiteData[key]) })) : [];
             const employmentType = employmentTypeData ? Object.keys(employmentTypeData).map(key => ({ name: key, count: employmentTypeData[key] })) : [];
             const topSkills = topSkillsData || [];
+            const emergingTech = emergingTechData || [];
+            
+            const postingsOverTime = postingsOverTimeRaw ? Object.keys(postingsOverTimeRaw)
+                .sort((a, b) => new Date(a + "T00:00:00").getTime() - new Date(b + "T00:00:00").getTime())
+                .map(key => ({ date: key, count: postingsOverTimeRaw[key], name: key, value: postingsOverTimeRaw[key] })) : [];
 
-            setFormattedData({ salaryByIndustry, jobsByExperience, remoteVsOnsite, employmentType, topSkills });
+            setFormattedData({ salaryByIndustry, jobsByExperience, remoteVsOnsite, employmentType, topSkills, postingsOverTime, emergingTech });
         };
         formatData();
-    }, [salaryByIndustryData, jobsByExperienceData, remoteVsOnsiteData, employmentTypeData, topSkillsData]);
+    }, [salaryByIndustryData, jobsByExperienceData, remoteVsOnsiteData, employmentTypeData, topSkillsData, emergingTechData, postingsOverTimeRaw]);
 
-    const isLoading = isLoadingSalary || isLoadingExperience || isLoadingRemote || isLoadingEmployment || isLoadingSkills;
+    const isLoading = isLoadingSalary || isLoadingExperience || isLoadingRemote || isLoadingEmployment || isLoadingSkills || isLoadingPostings || isLoadingEmergingTech;
 
     const value = {
         data: formattedData,

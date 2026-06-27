@@ -70,6 +70,19 @@ export async function updateJob(id: string, job: JobPosting): Promise<JobPosting
 
 // Analytics endpoints
 
+export interface EmergingTech {
+    skillName: string;
+    etiScore: number;
+    volume: number;
+    growth: number;
+    industrySpread: number;
+}
+
+export const fetchEmergingTechIndex = async (): Promise<EmergingTech[]> => {
+    const response: AxiosResponse<EmergingTech[]> = await api.get("/jobs/stats/emerging-tech-index");
+    return response.data;
+};
+
 export async function fetchKeyIndicators(): Promise<KeyIndicator[]> {
     const response: AxiosResponse<KeyIndicator[]> = await api.get("/jobs/stats/key-indicators");
     return response.data;

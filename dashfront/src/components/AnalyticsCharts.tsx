@@ -21,6 +21,7 @@ import {SalaryByIndustryChart} from "./recharts/SalaryByIndustryChart";
 import {RemoteVsOnsiteChart} from "./recharts/RemoteVsOnsiteChart";
 import {EmploymentTypeChart} from "./recharts/EmploymentTypeChart";
 import {JobsByExperienceChart} from "./recharts/JobsByExperienceChart";
+import {EmergingTechChart} from "./recharts/EmergingTechChart";
 import GenericDynamicChart from "./recharts/GenericDynamicChart";
 import {useDragScroll} from "../utils/useDragScroll";
 import SkillChart from "./SkillChart";
@@ -32,13 +33,14 @@ const initialCharts = [
     { id: 'employmentType', title: 'Employment Type Breakdown', type: 'pie/bar', fullWidth: true },
     { id: 'jobsByExperience', title: 'Job Postings by Experience Level', type: 'pie/bar', fullWidth: true },
     { id: 'topSkills', title: 'Most In-Demand Skills', type: 'bar', fullWidth: true },
+    { id: 'emergingTech', title: 'Emerging Tech Index', type: 'composed', fullWidth: true },
 ];
 
 const dropAnimationConfig = {
     sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.4' } } }),
 };
 
-export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewModeChange }: { initialLoadedChart?: any, viewMode: 'grid' | 'single', onViewModeChange: (mode: 'grid' | 'single') => void }) {
+export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewModeChange, focusedChartId, onFocusedChartIdChange }: { initialLoadedChart?: any, viewMode: 'grid' | 'single', onViewModeChange: (mode: 'grid' | 'single') => void, focusedChartId?: string, onFocusedChartIdChange?: (id: string) => void }) {
     const { data: analyticsData, isLoading: isDataLoading } = useAnalytics();
 
     const [drillDownIndustry, setDrillDownIndustry] = useState<{code: string, name: string} | null>(null);
@@ -54,9 +56,12 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
     const [chartOrder, setChartOrder] = useState(initialCharts);
     const [chartDisplay, setChartDisplay] = useState({ employmentType: 'pie', jobsByExperience: 'bar' } as any);
     const [chartUnits, setChartUnits] = useState({ employmentType: 'percentage', jobsByExperience: 'absolute' } as any);
+    const [chartSorts, setChartSorts] = useState({} as any);
     const [searchQuery, setSearchQuery] = useState("");
     const [activeId, setActiveId] = useState<string | null>(null);
-    const [focusedChartId, setFocusedChartId] = useState<string>('timeSeries');
+    const [internalFocusedChartId, setInternalFocusedChartId] = useState<string>('timeSeries');
+    const currentChartId = focusedChartId !== undefined ? focusedChartId : internalFocusedChartId;
+    const setCurrentChartId = onFocusedChartIdChange || setInternalFocusedChartId;
     const [floatingWindows, setFloatingWindows] = useState<any[]>([]);
     const { ref: scrollRef, events: scrollEvents } = useDragScroll<HTMLDivElement>();
 
@@ -94,6 +99,14 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
     const toggleChartType = (chartName: keyof typeof chartDisplay) => setChartDisplay((prev: any) => ({ ...prev, [chartName]: prev[chartName] === 'pie' ? 'bar' : 'pie' }));
     const toggleChartUnit = (chartName: keyof typeof chartUnits) => setChartUnits((prev: any) => ({ ...prev, [chartName]: prev[chartName] === 'absolute' ? 'percentage' : 'absolute' }));
     const toggleFloatingWindow = (chart: any) => setFloatingWindows(prev => prev.find(w => w.id === chart.id) ? prev.filter(w => w.id !== chart.id) : [...prev, chart]);
+    
+    const toggleChartSort = (chartId: string) => {
+        setChartSorts((prev: any) => {
+            const current = prev[chartId] || 'asc';
+            const next = current === 'asc' ? 'desc' : current === 'desc' ? 'none' : 'asc';
+            return { ...prev, [chartId]: next };
+        });
+    };
 
     const handleIndustryClick = async (entry: any) => {
         if (drillDownIndustry && drillDownIndustry.code === entry.code) {
@@ -140,12 +153,7 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
         } else {
             chartToSave = activeCharts.find(c => c.id === chartId);
             if (!chartToSave) return;
-            if (chartId === 'timeSeries') {
-                toast.error("Action not permitted", {
-                    description: "Please use the AI assistant to generate and save custom time series data.",
-                });
-                return;
-            }
+            if (chartId === 'timeSeries') { finalData = analyticsData.postingsOverTime; finalCategory = "Trends"; }
             if (chartId === 'salaryByIndustry') { finalData = drillDownIndustry ? drillDownData : analyticsData.salaryByIndustry; finalCategory = "Salary & Compensation"; }
             if (chartId === 'remoteVsOnsite') { finalData = analyticsData.remoteVsOnsite; finalCategory = "Salary & Compensation"; }
             if (chartId === 'employmentType') { finalData = analyticsData.employmentType; finalCategory = "Number of Jobs"; }
@@ -190,6 +198,14 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
     if (!isDataLoading && analyticsData.salaryByIndustry.length === 0 && analyticsData.jobsByExperience.length === 0) {
         return <EmptyState />;
     }
+    
+    const applySort = (data: any[], sortMode: string, valueKey: string) => {
+        if (!sortMode || sortMode === 'none' || !data) return data;
+        return [...data].sort((a, b) => {
+            if (sortMode === 'asc') return (a[valueKey] || 0) - (b[valueKey] || 0);
+            return (b[valueKey] || 0) - (a[valueKey] || 0);
+        });
+    };
 
     // Modularized Render function
     const renderChart = (chart: any) => {
@@ -203,19 +219,23 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
                         } else {
                             setLoadedSavedChart(null);
                         }
-                        setFocusedChartId('timeSeries');
+                        setCurrentChartId('timeSeries');
                     }}
                 />
             );
+        } else if (chart.id === 'emergingTech') {
+            return <EmergingTechChart data={analyticsData?.emergingTech || []} />;
         }
+        
+        const sortMode = chartSorts[chart.id as keyof typeof chartSorts] || 'asc';
 
         switch (chart.id) {
             case 'timeSeries':
-                return <TimeSeriesChart />;
+                return <TimeSeriesChart data={analyticsData.postingsOverTime} />;
             case 'salaryByIndustry':
                 return (
                     <SalaryByIndustryChart
-                            data={drillDownIndustry ? drillDownData : analyticsData.salaryByIndustry}
+                        data={applySort(drillDownIndustry ? drillDownData : analyticsData.salaryByIndustry, sortMode, drillDownIndustry ? 'count' : 'salary')}
                         isDrillDown={!!drillDownIndustry}
                         drillDownName={drillDownIndustry?.name}
                         isLoading={isDrillDownLoading}
@@ -224,11 +244,11 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
                     />
                 );
             case 'remoteVsOnsite':
-                return <RemoteVsOnsiteChart data={analyticsData.remoteVsOnsite} />;
+                return <RemoteVsOnsiteChart data={applySort(analyticsData.remoteVsOnsite, sortMode, 'salary')} />;
             case 'employmentType':
                 return (
                     <EmploymentTypeChart
-                        data={analyticsData.employmentType}
+                        data={applySort(analyticsData.employmentType, sortMode, 'count')}
                         displayType={chartDisplay.employmentType}
                         unit={chartUnits.employmentType}
                     />
@@ -236,13 +256,13 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
             case 'jobsByExperience':
                 return (
                     <JobsByExperienceChart
-                        data={analyticsData.jobsByExperience}
+                        data={applySort(analyticsData.jobsByExperience, sortMode, 'count')}
                         displayType={chartDisplay.jobsByExperience}
                         unit={chartUnits.jobsByExperience}
                     />
                 );
             case 'topSkills':
-                return <SkillChart skills={analyticsData.topSkills} />;
+                return <SkillChart skills={applySort(analyticsData.topSkills, sortMode, 'count')} />;
             default:
                 return null;
         }
@@ -321,22 +341,22 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
                             }}
                         >
                             {llmChartData && (
-                                <button onClick={() => setFocusedChartId('llmGenerated')} className={`chart-btn min-w-[200px] flex-shrink-0 px-4 py-3 rounded-xl border text-sm font-medium transition-all snap-center ${focusedChartId === 'llmGenerated' ? 'bg-primary border-primary text-primary-foreground shadow-md' : 'bg-card border-border text-muted-foreground hover:bg-secondary hover:text-foreground'}`}>AI Generated Chart</button>
+                                <button onClick={() => setCurrentChartId('llmGenerated')} className={`chart-btn min-w-[200px] flex-shrink-0 px-4 py-3 rounded-xl border text-sm font-medium transition-all snap-center ${currentChartId === 'llmGenerated' ? 'bg-primary border-primary text-primary-foreground shadow-md' : 'bg-card border-border text-muted-foreground hover:bg-secondary hover:text-foreground'}`}>AI Generated Chart</button>
                             )}
                             {loadedSavedChart && (
-                                <button onClick={() => setFocusedChartId(loadedSavedChart.id)} className={`chart-btn min-w-[200px] flex-shrink-0 px-4 py-3 rounded-xl border text-sm font-medium transition-all snap-center ${focusedChartId === loadedSavedChart.id ? 'bg-primary border-primary text-primary-foreground shadow-md' : 'bg-card border-border text-muted-foreground hover:bg-secondary hover:text-foreground'}`}>{loadedSavedChart.title}</button>
+                                <button onClick={() => setCurrentChartId(loadedSavedChart.id)} className={`chart-btn min-w-[200px] flex-shrink-0 px-4 py-3 rounded-xl border text-sm font-medium transition-all snap-center ${currentChartId === loadedSavedChart.id ? 'bg-primary border-primary text-primary-foreground shadow-md' : 'bg-card border-border text-muted-foreground hover:bg-secondary hover:text-foreground'}`}>{loadedSavedChart.title}</button>
                             )}
                             {activeCharts.map((chart) => (
-                                <button key={chart.id} onClick={() => setFocusedChartId(chart.id)} className={`chart-btn min-w-[200px] flex-shrink-0 px-4 py-3 rounded-xl border text-sm font-medium transition-all snap-center ${focusedChartId === chart.id ? 'bg-primary border-primary text-primary-foreground shadow-md' : 'bg-card border-border text-muted-foreground hover:bg-secondary hover:text-foreground'}`}>{chart.title}</button>
+                                <button id={chart.id === 'salaryByIndustry' ? 'tutorial-salary-btn' : undefined} key={chart.id} onClick={() => setCurrentChartId(chart.id)} className={`chart-btn min-w-[200px] flex-shrink-0 px-4 py-3 rounded-xl border text-sm font-medium transition-all snap-center ${currentChartId === chart.id ? 'bg-primary border-primary text-primary-foreground shadow-md' : 'bg-card border-border text-muted-foreground hover:bg-secondary hover:text-foreground'}`}>{chart.title}</button>
                             ))}
                         </div>
                     </div>
 
                     <div className="w-full min-h-[500px]">
                         {(() => {
-                            let activeChart = activeCharts.find(c => c.id === focusedChartId);
-                            if (focusedChartId === 'llmGenerated') activeChart = llmChartData;
-                            if (focusedChartId === loadedSavedChart?.id) activeChart = loadedSavedChart;
+                            let activeChart = activeCharts.find(c => c.id === currentChartId);
+                            if (currentChartId === 'llmGenerated') activeChart = llmChartData;
+                            if (currentChartId === loadedSavedChart?.id) activeChart = loadedSavedChart;
 
                             if (!activeChart) return <div className="text-center text-muted-foreground">Chart not found</div>;
 
@@ -350,6 +370,8 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
                                     onToggleFloat={() => toggleFloatingWindow(activeChart)}
                                     isFloating={floatingWindows.some(w => w.id === activeChart.id)}
                                     onSave={() => handleSaveChart(activeChart.id)}
+                                    onToggleSort={activeChart.id !== 'timeSeries' ? () => toggleChartSort(activeChart.id) : undefined}
+                                    sortOrder={activeChart.id !== 'timeSeries' ? (chartSorts[activeChart.id] || 'asc') : undefined}
                                 >
                                     {renderChart(activeChart)}
                                 </SortableChartCard>
@@ -395,6 +417,8 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
                                     onToggleFloat={() => toggleFloatingWindow(chart)}
                                     isFloating={floatingWindows.some(w => w.id === chart.id)}
                                     onSave={() => handleSaveChart(chart.id)}
+                                    onToggleSort={chart.id !== 'timeSeries' ? () => toggleChartSort(chart.id) : undefined}
+                                    sortOrder={chart.id !== 'timeSeries' ? (chartSorts[chart.id] || 'asc') : undefined}
                                 >
                                     {renderChart(chart)}
                                 </SortableChartCard>
