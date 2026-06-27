@@ -224,10 +224,11 @@ export default function AnalyticsCharts({ initialLoadedChart, viewMode, onViewMo
                 />
             );
         } else if (chart.id === 'emergingTech') {
-            return <EmergingTechChart data={analyticsData?.emergingTech || []} />;
+            const sortMode = chartSorts[chart.id as keyof typeof chartSorts] || 'desc';
+            return <EmergingTechChart data={applySort(analyticsData?.emergingTech || [], sortMode, 'etiScore')} />;
         }
         
-        const sortMode = chartSorts[chart.id as keyof typeof chartSorts] || 'asc';
+        const sortMode = chartSorts[chart.id as keyof typeof chartSorts] || 'desc';
 
         switch (chart.id) {
             case 'timeSeries':

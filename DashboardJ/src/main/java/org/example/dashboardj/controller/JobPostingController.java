@@ -26,10 +26,12 @@ public class JobPostingController {
     public ResponseEntity<Page<JobPostingDTO>> getAllJobs(
             @RequestParam(required = false) String remoteFlexibility,
             @RequestParam(required = false) String industry,
+            @RequestParam(required = false) String country,
+            @RequestParam(required = false) String city,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         
-        return ResponseEntity.ok(service.getAllJobs(PageRequest.of(page, size), remoteFlexibility, industry));
+        return ResponseEntity.ok(service.getAllJobs(PageRequest.of(page, size), remoteFlexibility, industry, country, city));
     }
 
     @GetMapping("/{id}")

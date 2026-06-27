@@ -12,6 +12,11 @@ public class JobPostingDTO {
     private String title;
     private String company;
     private String location;
+    private String description;
+    private Double latitude;
+    private Double longitude;
+    private String city;
+    private String country;
     private String postedDate;
 
     private Double salary;

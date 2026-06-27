@@ -39,7 +39,11 @@ const MemoizedNetworkGraphChart = ({ data, highlightedNode, onNodeClick, onBackg
             ...node,
             id: DOMPurify.sanitize(node.id || '')
         })),
-        links: data.links,
+        links: data.links.map(link => ({
+            ...link,
+            source: typeof link.source === 'object' && link.source ? (link.source as any).id : link.source,
+            target: typeof link.target === 'object' && link.target ? (link.target as any).id : link.target
+        })),
     }), [data]);
 
     const { highlightedNodes, highlightedLinks } = useMemo(() => {
@@ -69,8 +73,14 @@ const MemoizedNetworkGraphChart = ({ data, highlightedNode, onNodeClick, onBackg
             if (containerRef.current) {
                 setDimensions({
                     width: containerRef.current.offsetWidth,
-                    height: 400,
+                    height: containerRef.current.offsetHeight || 400,
                 });
+                
+                // When container resizes (e.g. Maximize toggle), give the physics engine a gentle nudge
+                // to smoothly redistribute the nodes into the newly available space
+                setTimeout(() => {
+                    fgRef.current?.d3ReheatSimulation();
+                }, 50);
             }
         });
         observer.observe(containerRef.current);
@@ -160,7 +170,7 @@ const MemoizedNetworkGraphChart = ({ data, highlightedNode, onNodeClick, onBackg
 
                     backgroundColor={bgColor}
                     cooldownTicks={100}
-                    onEngineStop={() => fgRef.current?.pauseAnimation()}
+                    warmupTicks={50}
                     enableNodeDrag={true}
                     enableZoomInteraction={true}
                 />

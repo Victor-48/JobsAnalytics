@@ -44,10 +44,12 @@ export async function fetchTopSkills(): Promise<{name: string, count: number}[]>
     return response.data;
 }
 
-export async function fetchJobs(remoteFlexibility?: string, industry?: string, page: number = 0, size: number = 10): Promise<PageResponse<JobPosting>> {
+export async function fetchJobs(remoteFlexibility?: string, industry?: string, country?: string, city?: string, page: number = 0, size: number = 10): Promise<PageResponse<JobPosting>> {
     const params: Record<string, string | number> = { page, size };
     if (remoteFlexibility) params.remoteFlexibility = remoteFlexibility;
     if (industry) params.industry = industry;
+    if (country) params.country = country;
+    if (city) params.city = city;
 
     const response: AxiosResponse<PageResponse<JobPosting>> = await api.get("/jobs", { params });
     return response.data;

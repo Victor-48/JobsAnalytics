@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import Jobs from "./pages/Jobs";
+import JobDetails from "./pages/JobDetails";
 import AddJob from "./pages/AddJob";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -26,6 +27,7 @@ function AppContent() {
                 <Routes>
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/jobs" element={<Jobs />} />
+                    <Route path="/jobs/:id" element={<JobDetails />} />
                     <Route path="/add-job" element={<AddJob />} />
                     <Route path="/edit-job/:id" element={<AddJob />} />
                     <Route path="/esco-explorer" element={<EscoExplorer />} />

@@ -12,9 +12,10 @@ export default function JobCard({ job }: Props) {
     return (
         <Card className="flex flex-col h-full relative group hover:shadow-md transition-all duration-300 border-border">
             {job.id && (
-                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                     <Link 
                         to={`/edit-job/${job.id}`} 
+                        onClick={(e) => e.stopPropagation()}
                         className="text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground px-3 py-1.5 rounded-md transition-colors shadow-sm"
                     >
                         Edit

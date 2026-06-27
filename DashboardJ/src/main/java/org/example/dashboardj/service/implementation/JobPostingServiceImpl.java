@@ -55,6 +55,14 @@ public class JobPostingServiceImpl implements JobPostingService {
         dto.setExperienceLevel(job.getExperienceLevel());
         dto.setRemoteFlexibility(job.getRemoteFlexibility());
         dto.setEmploymentType(job.getEmploymentType());
+        dto.setDescription(job.getDescription());
+        
+        if (job.getLocationNode() != null) {
+            dto.setLatitude(job.getLocationNode().getLatitude());
+            dto.setLongitude(job.getLocationNode().getLongitude());
+            dto.setCity(job.getLocationNode().getCity());
+            dto.setCountry(job.getLocationNode().getCountry());
+        }
 
         if (job.getSector() != null) {
             dto.setSector(new SectorDTO(job.getSector().getConceptUri(), job.getSector().getName()));
@@ -124,6 +132,7 @@ public class JobPostingServiceImpl implements JobPostingService {
                 .experienceLevel(dto.getExperienceLevel())
                 .remoteFlexibility(dto.getRemoteFlexibility())
                 .employmentType(dto.getEmploymentType())
+                .description(dto.getDescription())
                 .requiredSkills(new ArrayList<>())
                 .build();
 
@@ -195,13 +204,16 @@ public class JobPostingServiceImpl implements JobPostingService {
         OPTIONAL MATCH (j)-[:BELONGS_TO_SECTOR]->(s:Sector)
         OPTIONAL MATCH (j)-[:IS_OCCUPATION]->(o:Occupation)
         OPTIONAL MATCH (j)-[:REQUIRES_SKILL]->(k:Skill)
+        OPTIONAL MATCH (j)-[:LOCATED_IN]->(l:Location)
         RETURN j.id as id, j.title as title, j.company as company,
-               j.location as location, j.postedDate as postedDate,
+               j.location as location, j.description as description, j.postedDate as postedDate,
                j.salary as salary, j.currency as currency,
                j.experienceLevel as experienceLevel, j.remoteFlexibility as remoteFlexibility,
                j.employmentType as employmentType,
                s.conceptUri as sectorUri, s.name as sectorName,
                o.conceptUri as occUri, o.name as occName,
+               l.latitude as latitude, l.longitude as longitude,
+               l.city as city, l.country as country,
                collect(properties(k)) as skills
         """;
         return neo4jClient.query(query).fetch().all().stream()
@@ -212,6 +224,7 @@ public class JobPostingServiceImpl implements JobPostingService {
                     dto.setTitle((String) row.get("title"));
                     dto.setCompany((String) row.get("company"));
                     dto.setLocation((String) row.get("location"));
+                    dto.setDescription((String) row.get("description"));
                     Object date = row.get("postedDate");
                     dto.setPostedDate(date != null ? date.toString() : null);
                     Object salary = row.get("salary");
@@ -220,6 +233,13 @@ public class JobPostingServiceImpl implements JobPostingService {
                     dto.setExperienceLevel((String) row.get("experienceLevel"));
                     dto.setRemoteFlexibility((String) row.get("remoteFlexibility"));
                     dto.setEmploymentType((String) row.get("employmentType"));
+                    
+                    Object lat = row.get("latitude");
+                    if (lat != null) dto.setLatitude(((Number) lat).doubleValue());
+                    Object lon = row.get("longitude");
+                    if (lon != null) dto.setLongitude(((Number) lon).doubleValue());
+                    dto.setCity((String) row.get("city"));
+                    dto.setCountry((String) row.get("country"));
                     
                     String sectorUri = (String) row.get("sectorUri");
                     if (sectorUri != null) {
@@ -257,7 +277,7 @@ public class JobPostingServiceImpl implements JobPostingService {
     }
     
     @Override
-    public Page<JobPostingDTO> getAllJobs(Pageable pageable, String remoteFlexibility, String industry) {
+    public Page<JobPostingDTO> getAllJobs(Pageable pageable, String remoteFlexibility, String industry, String country, String city) {
         List<JobPostingDTO> allJobs = fetchAllJobsAsDTO();
 
         Stream<JobPostingDTO> stream = allJobs.stream();
@@ -272,6 +292,12 @@ public class JobPostingServiceImpl implements JobPostingService {
                 }
                 return false;
             });
+        }
+        if (country != null && !country.isEmpty()) {
+            stream = stream.filter(j -> country.equalsIgnoreCase(j.getCountry()));
+        }
+        if (city != null && !city.isEmpty()) {
+            stream = stream.filter(j -> city.equalsIgnoreCase(j.getCity()));
         }
 
         List<JobPostingDTO> filteredDtos = stream.collect(Collectors.toList());

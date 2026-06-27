@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 public interface JobPostingService {
-    Page<JobPostingDTO> getAllJobs(Pageable pageable, String remoteFlexibility, String industry);
+    Page<JobPostingDTO> getAllJobs(Pageable pageable, String remoteFlexibility, String industry, String country, String city);
     List<JobPostingDTO> getAllJobs();
     JobPostingDTO getJobById(String id);
     JobPostingDTO createJob(JobPostingDTO dto);

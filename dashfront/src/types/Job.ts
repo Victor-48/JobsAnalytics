@@ -5,6 +5,11 @@ export interface JobPosting {
     title: string;
     company: string;
     location: string;
+    description?: string;
+    latitude?: number;
+    longitude?: number;
+    city?: string;
+    country?: string;
     postedDate: string;
 
     // Analytics fields
