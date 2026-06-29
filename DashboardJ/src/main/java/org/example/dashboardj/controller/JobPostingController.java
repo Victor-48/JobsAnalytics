@@ -5,11 +5,13 @@ import org.example.dashboardj.dto.JobPostingDTO;
 import org.example.dashboardj.dto.KeyIndicatorDTO;
 import org.example.dashboardj.dto.EmergingTechDTO;
 import org.example.dashboardj.service.JobPostingService;
+import org.example.dashboardj.service.implementation.AdzunaIntegrationService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -21,6 +23,7 @@ import java.util.stream.Collectors;
 public class JobPostingController {
 
     private final JobPostingService service;
+    private final AdzunaIntegrationService adzunaIntegrationService;
 
     @GetMapping
     public ResponseEntity<Page<JobPostingDTO>> getAllJobs(
@@ -41,19 +44,20 @@ public class JobPostingController {
 
     // Creates a single job
     @PostMapping
-    public ResponseEntity<JobPostingDTO> createJob(@RequestBody JobPostingDTO dto) {
+    public ResponseEntity<JobPostingDTO> createJob(@Valid @RequestBody JobPostingDTO dto) {
         return ResponseEntity.ok(service.createJob(dto));
     }
 
     // Updates an existing job
     @PutMapping("/{id}")
-    public ResponseEntity<JobPostingDTO> updateJob(@PathVariable String id, @RequestBody JobPostingDTO dto) {
+    @PreAuthorize("@jobSecurityService.isJobOwner(authentication, #id) or hasRole('ADMIN')")
+    public ResponseEntity<JobPostingDTO> updateJob(@PathVariable String id, @Valid @RequestBody JobPostingDTO dto) {
         return ResponseEntity.ok(service.updateJob(id, dto));
     }
 
     // Creates multiple jobs in bulk
     @PostMapping("/bulk")
-    public ResponseEntity<List<JobPostingDTO>> createJobsInBulk(@RequestBody List<JobPostingDTO> dtos) {
+    public ResponseEntity<List<JobPostingDTO>> createJobsInBulk(@RequestBody List<@Valid JobPostingDTO> dtos) {
         return ResponseEntity.ok(service.createJobs(dtos));
     }
 
@@ -127,6 +131,11 @@ public class JobPostingController {
         return ResponseEntity.ok(service.getJobPostingsOverTime());
     }
 
+    @GetMapping("/stats/role-cannibalization")
+    public ResponseEntity<List<Map<String, Object>>> getRoleCannibalizationStats() {
+        return ResponseEntity.ok(service.getRoleCannibalizationStats());
+    }
+
     // Geospatial Endpoint
     @GetMapping("/stats/locations")
     public ResponseEntity<Object> getJobLocations() {
@@ -134,8 +143,16 @@ public class JobPostingController {
     }
 
     @PostMapping("/generate-test-data")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> generateTestData() {
         service.generateTestData();
         return ResponseEntity.ok("Test jobs generated.");
+    }
+
+    @GetMapping("/sync-adzuna")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> syncAdzunaJobs(@RequestParam(defaultValue = "10") int limit) {
+        int count = adzunaIntegrationService.syncJobs(limit);
+        return ResponseEntity.ok("Successfully synced " + count + " jobs from Adzuna.");
     }
 }

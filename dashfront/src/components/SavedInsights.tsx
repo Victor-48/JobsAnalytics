@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { Search, ChevronUp, ChevronDown } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 export interface SavedChart {
     id: string;
@@ -18,6 +20,8 @@ interface Props {
 
 export function SavedInsights({ onLoadInsight }: Props) {
     const [savedCharts, setSavedCharts] = useState<SavedChart[]>([]);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
     
     // Auto-update when localStorage changes
     useEffect(() => {
@@ -47,8 +51,17 @@ export function SavedInsights({ onLoadInsight }: Props) {
         window.dispatchEvent(new Event('insightsUpdated'));
     };
 
-    // Group by category
-    const groupedCharts = savedCharts.reduce((acc, chart) => {
+    const toggleCategory = (category: string) => {
+        setCollapsedCategories(prev => ({ ...prev, [category]: !prev[category] }));
+    };
+
+    // Filter by search query and group by category
+    const filteredCharts = savedCharts.filter(chart => 
+        chart.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        (chart.query && chart.query.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+
+    const groupedCharts = filteredCharts.reduce((acc, chart) => {
         if (!acc[chart.category]) acc[chart.category] = [];
         acc[chart.category].push(chart);
         return acc;
@@ -65,6 +78,17 @@ export function SavedInsights({ onLoadInsight }: Props) {
                 <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">Saved Insights</h2>
             </div>
             
+            <div className="relative mb-6">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input 
+                    type="text" 
+                    placeholder="Search insights..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 h-9 bg-background/50 text-sm rounded-xl"
+                />
+            </div>
+            
             {savedCharts.length === 0 ? (
                 <div className="text-sm text-muted-foreground text-center py-10 px-2">
                     <svg className="w-12 h-12 mx-auto mb-3 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
@@ -74,11 +98,21 @@ export function SavedInsights({ onLoadInsight }: Props) {
                 <div className="space-y-6">
                     {Object.entries(groupedCharts).map(([category, charts]) => (
                         <div key={category}>
-                            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3 flex items-center gap-2">
-                                {category}
-                                <span className="bg-secondary text-secondary-foreground text-[10px] px-1.5 py-0.5 rounded-full">{charts.length}</span>
-                            </h3>
-                            <div className="space-y-2">
+                            <div 
+                                className="flex items-center justify-between cursor-pointer mb-3 group"
+                                onClick={() => toggleCategory(category)}
+                            >
+                                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest flex items-center gap-2 group-hover:text-foreground transition-colors">
+                                    {category}
+                                    <span className="bg-secondary text-secondary-foreground text-[10px] px-1.5 py-0.5 rounded-full">{charts.length}</span>
+                                </h3>
+                                <div className="text-muted-foreground group-hover:text-foreground transition-colors">
+                                    {collapsedCategories[category] ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+                                </div>
+                            </div>
+                            
+                            {!collapsedCategories[category] && (
+                                <div className="space-y-2 mb-6">
                                 {charts.sort((a, b) => b.timestamp - a.timestamp).map(chart => (
                                     <div 
                                         key={chart.id} 
@@ -111,6 +145,7 @@ export function SavedInsights({ onLoadInsight }: Props) {
                                     </div>
                                 ))}
                             </div>
+                            )}
                         </div>
                     ))}
                 </div>

@@ -1,6 +1,7 @@
 package org.example.dashboardj.service.implementation;
 
 import lombok.RequiredArgsConstructor;
+import org.example.dashboardj.aop.LogExecutionTime;
 import org.example.dashboardj.dto.*;
 import org.example.dashboardj.entity.JobPosting;
 import org.example.dashboardj.entity.Sector;
@@ -18,6 +19,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.beans.factory.annotation.Value;
@@ -56,6 +59,7 @@ public class JobPostingServiceImpl implements JobPostingService {
         dto.setRemoteFlexibility(job.getRemoteFlexibility());
         dto.setEmploymentType(job.getEmploymentType());
         dto.setDescription(job.getDescription());
+        dto.setUrl(job.getUrl());
         
         if (job.getLocationNode() != null) {
             dto.setLatitude(job.getLocationNode().getLatitude());
@@ -133,6 +137,7 @@ public class JobPostingServiceImpl implements JobPostingService {
                 .remoteFlexibility(dto.getRemoteFlexibility())
                 .employmentType(dto.getEmploymentType())
                 .description(dto.getDescription())
+                .url(dto.getUrl())
                 .requiredSkills(new ArrayList<>())
                 .build();
 
@@ -209,8 +214,8 @@ public class JobPostingServiceImpl implements JobPostingService {
                j.location as location, j.description as description, j.postedDate as postedDate,
                j.salary as salary, j.currency as currency,
                j.experienceLevel as experienceLevel, j.remoteFlexibility as remoteFlexibility,
-               j.employmentType as employmentType,
-               s.conceptUri as sectorUri, s.name as sectorName,
+               j.employmentType as employmentType, j.url as url,
+               s.naceCode as sectorUri, s.naceName as sectorName,
                o.conceptUri as occUri, o.name as occName,
                l.latitude as latitude, l.longitude as longitude,
                l.city as city, l.country as country,
@@ -233,6 +238,7 @@ public class JobPostingServiceImpl implements JobPostingService {
                     dto.setExperienceLevel((String) row.get("experienceLevel"));
                     dto.setRemoteFlexibility((String) row.get("remoteFlexibility"));
                     dto.setEmploymentType((String) row.get("employmentType"));
+                    dto.setUrl((String) row.get("url"));
                     
                     Object lat = row.get("latitude");
                     if (lat != null) dto.setLatitude(((Number) lat).doubleValue());
@@ -318,13 +324,19 @@ public class JobPostingServiceImpl implements JobPostingService {
     @Override
     public JobPostingDTO getJobById(String id) {
         return jobRepo.findById(id).map(this::mapToDTO)
-                .orElseThrow(() -> new RuntimeException("Job not found with id: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Job not found with id: " + id));
     }
 
     @Override
     @Transactional
     public JobPostingDTO createJob(JobPostingDTO dto) {
         JobPosting job = mapToEntity(dto);
+        
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser")) {
+            job.setCreatedByUserId(auth.getName());
+        }
+        
         JobPosting savedJob = jobRepo.save(job);
         return mapToDTO(savedJob);
     }
@@ -441,6 +453,7 @@ public class JobPostingServiceImpl implements JobPostingService {
 
     @Override
     @Cacheable(value = "analyticsCache", key = "#root.methodName")
+    @LogExecutionTime
     public Map<String, Long> getJobPostingsOverTime() {
         return neo4jClient.query("MATCH (j:JobPosting) WHERE j.postedDate IS NOT NULL " +
                "RETURN substring(toString(j.postedDate), 0, 10) as name, count(j) as count")
@@ -545,6 +558,7 @@ public class JobPostingServiceImpl implements JobPostingService {
 
     @Override
     @Cacheable(value = "analyticsCache", key = "#root.methodName")
+    @LogExecutionTime
     public List<KeyIndicatorDTO> getKeyIndicators() {
         // Total Jobs with Trend
         Collection<Map<String, Object>> totalJobsList = neo4jClient.query(
@@ -684,5 +698,39 @@ public class JobPostingServiceImpl implements JobPostingService {
 
         createJob(job1);
         createJob(job2);
+    }
+
+    @Override
+    @LogExecutionTime
+    public List<Map<String, Object>> getRoleCannibalizationStats() {
+        String query = """
+            MATCH (j:JobPosting)-[:REQUIRES_SKILL]->(s:Skill)
+            WITH j.title AS role, collect(s.name) AS skills
+            WITH collect({role: role, skills: skills}) as roleList
+            UNWIND roleList as r1
+            UNWIND roleList as r2
+            WITH r1, r2 WHERE r1.role < r2.role
+            
+            // Jaccard similarity approximation for skill sets
+            WITH r1.role AS RoleA, r2.role AS RoleB,
+                 [x IN r1.skills WHERE x IN r2.skills] AS intersection,
+                 r1.skills + [x IN r2.skills WHERE NOT x IN r1.skills] AS union
+            WITH RoleA, RoleB, size(intersection) AS overlapCount, size(union) as totalCount
+            WHERE overlapCount > 0 AND totalCount > 0
+            WITH RoleA, RoleB, overlapCount, (1.0 * overlapCount / totalCount) AS overlapPercentage
+            WHERE overlapPercentage > 0.4
+            RETURN RoleA, RoleB, overlapPercentage, overlapCount
+            ORDER BY overlapPercentage DESC
+            LIMIT 10
+            """;
+            
+        return neo4jClient.query(query).fetch().all().stream().map(row -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("roleA", row.get("RoleA"));
+            map.put("roleB", row.get("RoleB"));
+            map.put("overlapPercentage", row.get("overlapPercentage"));
+            map.put("sharedSkillsCount", row.get("overlapCount"));
+            return map;
+        }).collect(Collectors.toList());
     }
 }

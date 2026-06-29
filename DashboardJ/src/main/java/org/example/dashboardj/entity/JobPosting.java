@@ -27,6 +27,7 @@ public class JobPosting {
     private String company;
     private String location;
     private String description;
+    private String url;
 
     @Relationship(type = "LOCATED_IN", direction = Relationship.Direction.OUTGOING)
     private Location locationNode;

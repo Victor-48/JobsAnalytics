@@ -1,6 +1,7 @@
 package org.example.dashboardj.dto;
 
 import lombok.*;
+import jakarta.validation.constraints.*;
 import java.util.List;
 
 @Data
@@ -9,8 +10,14 @@ import java.util.List;
 @Builder
 public class JobPostingDTO {
     private String id;
+    
+    @NotBlank(message = "Title is mandatory")
     private String title;
+    
+    @NotBlank(message = "Company is mandatory")
     private String company;
+    
+    @NotBlank(message = "Location is mandatory")
     private String location;
     private String description;
     private Double latitude;
@@ -18,6 +25,7 @@ public class JobPostingDTO {
     private String city;
     private String country;
     private String postedDate;
+    private String url;
 
     private Double salary;
     private String currency;

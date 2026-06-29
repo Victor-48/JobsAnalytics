@@ -32,6 +32,8 @@ public interface JobPostingService {
     // Time Series
     Map<String, Long> getJobPostingsOverTime();
     
+    List<Map<String, Object>> getRoleCannibalizationStats();
+
     List<KeyIndicatorDTO> getKeyIndicators();
     List<EmergingTechDTO> getEmergingTechIndex();
     
